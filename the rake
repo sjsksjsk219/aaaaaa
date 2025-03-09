@@ -1,4 +1,4 @@
-if game.PlaceID == 2413927524 then
+if game.PlaceId == 2413927524 then
   
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
   local Window = Rayfield:CreateWindow({
