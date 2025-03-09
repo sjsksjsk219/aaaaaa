@@ -69,25 +69,29 @@ local Button = MainTab:CreateButton({
     end,
   })
 
-local Slider = MainTab:CreateSlider({
+local Input = MainTab:CreateInput({
   Name = "速度调节",
-  Range = {0, 1000},
-  Increment = 1,
-  Suffix = "Speed",
-  CurrentValue = 16,
-  Flag = "Slider1",
-  Callback = function(Value)
-    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = (Value)
+  PlaceholderText = "请输入",
+  RemoveTextAfterFocusLost = true,
+  Callback = function(Text)
+    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = (Text)
     end,
   })
 
-local Dropdown = MainTab:CreateDropdown({
+local Input = MainTab:CreateInput({
+  Name = "跳跃高度调节",
+  PlaceholderText = "请输入",
+  RemoveTextAfterFocusLost = true,
+  Callback = function(Text)
+    game.Players.LocalPlayer.Character.Humanoid.JumpPower = (Text)
+    end,
+  })
+
+local Toggle = MainTab:CreateToggle({
   Name = "穿墙",
-  Options = {"关闭穿墙","开启穿墙"},
-  CurrentOption = {"开启穿墙"},
-  MultipleOptions = false,
-  Flag = "TP",
-  Callback = function(Option)
+  CurrentValue = false,
+  Flag = "无",
+  Callback = function(Value)
     game:GetService("RunService").Stepped:Connect(function()
       for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
         if part:IsA("BasePart") then
