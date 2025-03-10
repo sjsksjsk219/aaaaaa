@@ -114,4 +114,121 @@ local Button = MainTab:CreateButton({
     loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
     end,
   })
+
+else
+  
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+  local Window = Rayfield:CreateWindow({
+    Name = "Script",
+    LoadingTitle = "脚本",
+    LoadingSubtitle = "by sjsksjsk",
+    ConfigurationSaving = {
+      Enabled = false,
+      FoldrName = nil,
+      FileName = "脚本"
+      },
+    Discord = {
+      Enabled = false,
+      Invite = "discord.gg/Mspaint",
+      RememberJoins = true
+      },
+    KeySystem = false,
+    KeySettings = {
+      Title ="The Rake脚本卡密系统",
+      Subtitle = "点击获取链接",
+      Note = "无",
+      FileName = "The Rake Link",
+      SaveKey = false,
+      GrabKeyFromSite = true,
+      Key = {"https://pastebin.com/raw/kVe5WMyJ"}
+      }
+    })
+local MainTab = Window:CreateTab("通用功能",nil)
+local MainSection = MainTab:CreateSection("部分服务器不可用")
+
+Rayfield:Notify({
+  Title ="欢迎使用本脚本",
+  Content = "开源",
+  Duration = 2,
+  Image = nil,
+  Actions = {
+    Ignore = {
+      Name = "好的",
+      Callback = function()
+        print("用户点了好的")
+        end
+      },
+    },
+  })
+
+local Button = MainTab:CreateButton({
+  Name = "无限跳跃",
+  Callback = function()
+    _G.infinjump = not _G.infinjump
+    if _G.infinJumpStarted == nil then
+      _G.infinJumpStarted = true
+      
+      game.StarterGui:SetCore("SendNotification",{Title="The Rake Script";Text="无限跳跃已开启！";Duration=5;})
+      
+      local plr = game:GetService('Players').LocalPlayer
+      local m = plr:GetMouse()
+      m.KeyDown:connect(function(k)
+        if _G.infinjump then
+          if k:byte() == 32 then
+            humanoid = game:GetService'Players'.LocalPlayer.Character:FindFirstChild0fClass('Humanoid')
+            humanoid:ChangeState('Jumping')
+            wait()
+            humanoid:ChangeState('Seated')
+            end
+          end
+        end)
+      end
+    end,
+  })
+
+local Input = MainTab:CreateInput({
+  Name = "速度调节",
+  PlaceholderText = "请输入",
+  RemoveTextAfterFocusLost = true,
+  Callback = function(Text)
+    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = (Text)
+    end,
+  })
+
+local Input = MainTab:CreateInput({
+  Name = "跳跃高度调节",
+  PlaceholderText = "请输入",
+  RemoveTextAfterFocusLost = true,
+  Callback = function(Text)
+    game.Players.LocalPlayer.Character.Humanoid.JumpPower = (Text)
+    end,
+  })
+
+local Toggle = MainTab:CreateToggle({
+  Name = "穿墙",
+  CurrentValue = false,
+  Flag = "无",
+  Callback = function(Value)
+    game:GetService("RunService").Stepped:Connect(function()
+      for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+        if part:IsA("BasePart") then
+          part.CanCollide  = true
+          end
+          end
+        end
+   )end,
+})
+
+local Button = MainTab:CreateButton({
+  Name = "开启Dex",
+  Callback = function()
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/main/dex.lua'))()
+    end,
+  })
+local Button = MainTab:CreateButton({
+  Name = "IY指令",
+  Callback = function()
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+    end,
+  })
 end
