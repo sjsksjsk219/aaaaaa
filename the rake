@@ -120,12 +120,12 @@ else
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
   local Window = Rayfield:CreateWindow({
     Name = "Script",
-    LoadingTitle = "脚本",
+    LoadingTitle = "脚本中心XB",
     LoadingSubtitle = "by sjsksjsk",
     ConfigurationSaving = {
       Enabled = false,
       FoldrName = nil,
-      FileName = "脚本"
+      FileName = "黑脚本"
       },
     Discord = {
       Enabled = false,
@@ -232,6 +232,11 @@ local Button = MainTab:CreateButton({
     end,
   })
 local MainTab = Window:CreateTab("Doors",nil)
-
+local Button = MainTab:CreateButton({
+  Name = "Mspaint",
+  Callback = function()
+    loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/002c19202c9946e6047b0c6e0ad51f84.lua"))()
+  end
+ })
 
 end
