@@ -231,4 +231,7 @@ local Button = MainTab:CreateButton({
     loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
     end,
   })
+local MainTab = Window:CreateTab("Doors",nil)
+
+
 end
