@@ -2,7 +2,7 @@ if game.PlaceId == 2413927524 then
   
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
   local Window = Rayfield:CreateWindow({
-    Name = "The Rake",
+    Name = "The Rake Script",
     LoadingTitle = "The Rake脚本",
     LoadingSubtitle = "by sjsksjsk",
     ConfigurationSaving = {
