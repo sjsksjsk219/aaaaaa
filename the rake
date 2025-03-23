@@ -114,6 +114,13 @@ local Button = MainTab:CreateButton({
     loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
     end,
   })
+local Button = MainTab:CreateButton({
+  Name = "开启Spy",
+  Callback = function()
+    loadstring(game:HttpGet:("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))
+  end,
+  })
+
 
 else
   
@@ -231,48 +238,55 @@ local Button = MainTab:CreateButton({
     loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
     end,
   })
+local Button = MainTab:CreateButton({
+  Name = "开启Spy",
+  Callback = function()
+    loadstring(game:HttpGet:("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))
+  end,
+  })
+
 local MainTab = Window:CreateTab("Doors",nil)
 
 local Button = MainTab:CreateButton({
   Name = "Mspaint",
   Callback = function()
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/002c19202c9946e6047b0c6e0ad51f84.lua"))()
-  end
+  end,
  })
 
 local Button = MainTab:CreateButton({
   Name = "Doors Floor2脚本",
   Callback = function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/notpoiu/mspaint/main/main.lua"))()
-  end
+  end,
 })
 
 local Button = MainTab:CreateButton({
   Name = "Doors不知名脚本",
   Callback = function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/Yumiara/Python/main/Main.lua"))()
-  end
+  end,
 })
 
 local Button = MainTab:CreateButton({
   Name = "上一个运行失败点这个",
   Callback = function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/Yumiara/Python/main/Main.lua"))();
-  end
+  end,
 })
 
 local Button = MainTab:CreateButton({
   Name = "Doors极端模式",
   Callback = function()
     loadstring(game:HttpGet("https://glot.io/snippets/gp5pu59o7f/raw"))()
-  end
+  end,
 })
 
 local Button = MainTab:CreateButton({
   Name = "Doors脚本模式合集",
   Callback = function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/Munciseekawa/Sc/refs/heads/main/ScrtptsMode"))()
-  end
+  end,
 })
 
 local MainTab = Window:CreateTab("Pressure",nil)
@@ -281,28 +295,28 @@ local Button = MainTab:CreateButton({
   Name = "Mspaint",
   Callback = function()
     loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/002c19202c9946e6047b0c6e0ad51f84.lua"))()
-  end
+  end,
 })
 
 local Button = MainTab:CreateButton({
   Name = "Pressure走门脚本",
   Callback = function()
     loadstring(game:HttpGet(('https://raw.githubusercontent.com/zuohongjian/bjb/main/Pressure')))()
-  end
+  end,
 })
 
 local Button = MainTab:CreateButton({
   Name = "Pressure",
   Callback = function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/Yumiara/NewCMain/main/Main.lua"))()
-  end
+  end,
 })
 
 local Button = MainTab:CreateButton({
   Name = "The Hunt",
   Callback = function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/3345-c-a-t-s-u-s/Neuron-XYZ/refs/heads/main/Source/Pressure.lua"))()
-  end
+  end,
 })
 
 end
