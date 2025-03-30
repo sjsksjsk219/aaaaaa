@@ -108,17 +108,19 @@ local Button = MainTab:CreateButton({
     loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/main/dex.lua'))()
     end,
   })
+
 local Button = MainTab:CreateButton({
   Name = "IY指令",
   Callback = function()
     loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
     end,
   })
+
 local Button = MainTab:CreateButton({
   Name = "开启Spy",
   Callback = function()
-    loadstring(game:HttpGet:("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))
-  end,
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))()
+    end,
   })
 
 
@@ -241,7 +243,7 @@ local Button = MainTab:CreateButton({
 local Button = MainTab:CreateButton({
   Name = "开启Spy",
   Callback = function()
-    loadstring(game:HttpGet:("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))
   end,
   })
 
