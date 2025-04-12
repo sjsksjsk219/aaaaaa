@@ -103,22 +103,22 @@ local Toggle = MainTab:CreateToggle({
 })
 
 local Toggle = MainTab:CreateToggle({
-  Name = "穿墙",
+  Name = "玩家透视",
   CurrentValue = false,
   Flag = "无",
   Callback = function(Value)
       getgenv().ESPTracers = true
-local Players = game:GetService("Players")
-local LocalPlayer = Players.Localplayer
+      local Players = game:GetService("Players")
+      local LocalPlayer = Players.Localplayer
 
-local function AssignTracers()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                local PlayerChar = game.Workspace:FindFirstChild(player.name)
-                local LocalChar = LocalPlayer.Character
-                if not PlayerChat or not LocalChar or not LocalChar:FindFirstChild("HumanoidRootPart") then
-                    return
-                end
+      local function AssignTracers()
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local PlayerChar = game.Workspace:FindFirstChild(player.name)
+                    local LocalChar = LocalPlayer.Character
+                    if not PlayerChat or not LocalChar or not LocalChar:FindFirstChild("HumanoidRootPart") then
+                        return
+                    end
             
                 local beam
                 if PlayerChar and LocalChar then
@@ -145,24 +145,24 @@ local function AssignTracers()
                         beam.Width0 = 0.1
                         beam.Width1 = 0.1
                         beam.Parent = PlayerChar
-                    end
-                end
-            end
-        end
-    end
+                      end
+                  end
+              end
+          end
+       end
 
-AssignTracers()
+       AssignTracers()
 
-game.Players.PlayerAdded:Connect(function(player)
-    repeat wait() until player.Character
-    AssignTracers()
-end)
+       game.Players.PlayerAdded:Connect(function(player)
+           repeat wait() until player.Character
+           AssignTracers()
+       end)
 
-LocalPlayer.CharacterAdded:Connect(function()
-    repeat wait() until LocalPlayer.Character or wait(2)
-    AssignTracers()
-end)       
-    
+       LocalPlayer.CharacterAdded:Connect(function()
+           repeat wait() until LocalPlayer.Character or wait(2)
+           AssignTracers()
+       end)       
+    end,
 })
 
 
@@ -293,22 +293,22 @@ local Toggle = MainTab:CreateToggle({
 })
 
 local Toggle = MainTab:CreateToggle({
-  Name = "穿墙",
+  Name = "玩家ESP",
   CurrentValue = false,
   Flag = "无",
   Callback = function(Value)
       getgenv().ESPTracers = true
-local Players = game:GetService("Players")
-local LocalPlayer = Players.Localplayer
+      local Players = game:GetService("Players")
+      local LocalPlayer = Players.Localplayer
 
-local function AssignTracers()
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                local PlayerChar = game.Workspace:FindFirstChild(player.name)
-                local LocalChar = LocalPlayer.Character
-                if not PlayerChat or not LocalChar or not LocalChar:FindFirstChild("HumanoidRootPart") then
-                    return
-                end
+      local function AssignTracers()
+          for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local PlayerChar = game.Workspace:FindFirstChild(player.name)
+                    local LocalChar = LocalPlayer.Character
+                    if not PlayerChat or not LocalChar or not LocalChar:FindFirstChild("HumanoidRootPart") then
+                        return
+                    end
             
                 local beam
                 if PlayerChar and LocalChar then
@@ -335,24 +335,24 @@ local function AssignTracers()
                         beam.Width0 = 0.1
                         beam.Width1 = 0.1
                         beam.Parent = PlayerChar
-                    end
-                end
-            end
-        end
-    end
+                      end
+                  end
+              end
+          end
+      end
 
-AssignTracers()
+      AssignTracers()
 
-game.Players.PlayerAdded:Connect(function(player)
-    repeat wait() until player.Character
-    AssignTracers()
-end)
+      game.Players.PlayerAdded:Connect(function(player)
+          repeat wait() until player.Character
+          AssignTracers()
+      end)
 
-LocalPlayer.CharacterAdded:Connect(function()
-    repeat wait() until LocalPlayer.Character or wait(2)
-    AssignTracers()
-end)       
-    
+      LocalPlayer.CharacterAdded:Connect(function()
+          repeat wait() until LocalPlayer.Character or wait(2)
+          AssignTracers()
+      end)       
+   end, 
 })
 
 local Button = MainTab:CreateButton({
