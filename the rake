@@ -102,6 +102,70 @@ local Toggle = MainTab:CreateToggle({
    )end,
 })
 
+local Toggle = MainTab:CreateToggle({
+  Name = "穿墙",
+  CurrentValue = false,
+  Flag = "无",
+  Callback = function(Value)
+      getgenv().ESPTracers = true
+local Players = game:GetService("Players")
+local LocalPlayer = Players.Localplayer
+
+local function AssignTracers()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local PlayerChar = game.Workspace:FindFirstChild(player.name)
+                local LocalChar = LocalPlayer.Character
+                if not PlayerChat or not LocalChar or not LocalChar:FindFirstChild("HumanoidRootPart") then
+                    return
+                end
+            
+                local beam
+                if PlayerChar and LocalChar then
+                    if PlayerChar:FindFirstChild("ESPBeam") then
+                        beam = PlayerChar:FindFirstChild("ESPBeam")
+                        if beam then
+                            beam.Enabled = getgenv().ESPTracers
+                            local attachment0 = Instance.new("Attachment",LocalChar:WaitForChild("HumanoidRootPart"))
+                            beam.Attachment0 = attachment0
+                        end
+                    end
+            
+            
+                    if getgenv().ESPTracers and not beam then
+                        local attachment0 = Instance.new("Attachment",LocalChar:WaitForChild("HumanoidRootPart"))
+                        local attachment1 = Instance.new("Attachment",PlayerChar:WaitForChild("humanoidRootPart"))
+                
+                        beam = Instance.new("Beam")
+                        beam.Name = "ESPBeam"
+                        beam.Attachment0 = attachment0
+                        beam.Attachment1 = attachment1
+                        beam.Color = ColorSequence.new(Color3.fromRGB(0,255,0))
+                        beam.FaceCamera = true
+                        beam.Width0 = 0.1
+                        beam.Width1 = 0.1
+                        beam.Parent = PlayerChar
+                    end
+                end
+            end
+        end
+    end
+
+AssignTracers()
+
+game.Players.PlayerAdded:Connect(function(player)
+    repeat wait() until player.Character
+    AssignTracers()
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    repeat wait() until LocalPlayer.Character or wait(2)
+    AssignTracers()
+end)       
+    
+})
+
+
 local Button = MainTab:CreateButton({
   Name = "开启Dex",
   Callback = function()
@@ -134,7 +198,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
     ConfigurationSaving = {
       Enabled = false,
       FoldrName = nil,
-      FileName = "黑脚本"
+      FileName = "脚本中心XB"
       },
     Discord = {
       Enabled = false,
@@ -226,6 +290,69 @@ local Toggle = MainTab:CreateToggle({
           end
         end
    )end,
+})
+
+local Toggle = MainTab:CreateToggle({
+  Name = "穿墙",
+  CurrentValue = false,
+  Flag = "无",
+  Callback = function(Value)
+      getgenv().ESPTracers = true
+local Players = game:GetService("Players")
+local LocalPlayer = Players.Localplayer
+
+local function AssignTracers()
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local PlayerChar = game.Workspace:FindFirstChild(player.name)
+                local LocalChar = LocalPlayer.Character
+                if not PlayerChat or not LocalChar or not LocalChar:FindFirstChild("HumanoidRootPart") then
+                    return
+                end
+            
+                local beam
+                if PlayerChar and LocalChar then
+                    if PlayerChar:FindFirstChild("ESPBeam") then
+                        beam = PlayerChar:FindFirstChild("ESPBeam")
+                        if beam then
+                            beam.Enabled = getgenv().ESPTracers
+                            local attachment0 = Instance.new("Attachment",LocalChar:WaitForChild("HumanoidRootPart"))
+                            beam.Attachment0 = attachment0
+                        end
+                    end
+            
+            
+                    if getgenv().ESPTracers and not beam then
+                        local attachment0 = Instance.new("Attachment",LocalChar:WaitForChild("HumanoidRootPart"))
+                        local attachment1 = Instance.new("Attachment",PlayerChar:WaitForChild("humanoidRootPart"))
+                
+                        beam = Instance.new("Beam")
+                        beam.Name = "ESPBeam"
+                        beam.Attachment0 = attachment0
+                        beam.Attachment1 = attachment1
+                        beam.Color = ColorSequence.new(Color3.fromRGB(0,255,0))
+                        beam.FaceCamera = true
+                        beam.Width0 = 0.1
+                        beam.Width1 = 0.1
+                        beam.Parent = PlayerChar
+                    end
+                end
+            end
+        end
+    end
+
+AssignTracers()
+
+game.Players.PlayerAdded:Connect(function(player)
+    repeat wait() until player.Character
+    AssignTracers()
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    repeat wait() until LocalPlayer.Character or wait(2)
+    AssignTracers()
+end)       
+    
 })
 
 local Button = MainTab:CreateButton({
