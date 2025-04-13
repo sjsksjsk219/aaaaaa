@@ -145,10 +145,10 @@ local Toggle = MainTab:CreateToggle({
                         beam.Width0 = 0.1
                         beam.Width1 = 0.1
                         beam.Parent = PlayerChar
-                      end
-                  end
-              end
-          end
+                       end
+                   end
+               end
+           end
        end
 
        AssignTracers()
@@ -156,13 +156,13 @@ local Toggle = MainTab:CreateToggle({
        game.Players.PlayerAdded:Connect(function(player)
            repeat wait() until player.Character
            AssignTracers()
-       )end
+       end)
 
        LocalPlayer.CharacterAdded:Connect(function()
            repeat wait() until LocalPlayer.Character or wait(2)
            AssignTracers()
-       )end       
-end,
+       end)       
+  end,
 })
 
 
