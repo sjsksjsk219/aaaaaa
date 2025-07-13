@@ -319,9 +319,6 @@ Money10ESP:SetConflg({
     ShowDistance = false
 })
 
-local MainTab = Window:CreateTab("ESP",nil)
-local MainSection = MainTab:CreateSection("无")
-
 local Toggle = MainTab:CreateToggle({
     Name = "柜子透视",
     Callback = function(v) 
