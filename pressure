@@ -179,10 +179,9 @@ local function updateAllLockers()
         roomsFolder = roomsFolder:FindFirstChild("Rooms")
         if roomsFolder then
             for _, roomType in ipairs(roomsFolder:GetChildren()) do
-                -- 查找所有柜子，包括名称包含"Locker"的实例
                 local lockers = {}
                 for _, descendant in ipairs(roomType:GetDescendants()) do
-                    if descendant.Name:find("Locker") or descendant:IsA("Model") and descendant.Name:match("柜") then
+                    if descendant.Name:find("Locker") or descendant:IsA("Model") and descendant.Name:match("柜子") then
                         table.insert(lockers, descendant)
                     end
                 end
@@ -203,8 +202,8 @@ local function startLockerESP()
         roomsFolder = roomsFolder:FindFirstChild("Rooms")
         if roomsFolder then
             lockerESPConnection = roomsFolder.DescendantAdded:Connect(function(descendant)
-                if descendant.Name:find("Locker") or descendant:IsA("Model") and descendant.Name:match("柜") then
-                    task.wait(0.5) -- 等待确保对象完全加载
+                if descendant.Name:find("Locker") or descendant:IsA("Model") and descendant.Name:match("柜子") then
+                    task.wait(0.5)
                     setupLockerESP(descendant)
                 end
             end)
