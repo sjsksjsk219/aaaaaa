@@ -319,8 +319,13 @@ Money10ESP:SetConflg({
     ShowDistance = false
 })
 
+local MainTab = Window:CreateTab("ESP", nil)
+local MainSection = MainTab:CreateSection("无")
+
 local Toggle = MainTab:CreateToggle({
     Name = "柜子透视",
+    CurrentValue = false,
+    Flag = "nil",
     Callback = function(v) 
         if v then LockerESP:Start() else LockerESP:Stop() end 
     end
@@ -328,6 +333,8 @@ local Toggle = MainTab:CreateToggle({
 
 local Toggle = MainTab:CreateToggle({
     Name = "门透视",
+    CurrentValue = false,
+    Flag = "nil",
     Callback = function(v)
         if v then DoorESP:Start() else DoorESP:Stop() end
     end
@@ -335,6 +342,8 @@ local Toggle = MainTab:CreateToggle({
 
 local Toggle = MainTab:CreateToggle({
     Name = "钱透视",
+    CurrentValue = false,
+    Flag = "nil",
     Callback = function(v)
         if v then
             Money5ESP:Start()
