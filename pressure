@@ -116,166 +116,180 @@ local Toggle = MainTab:CreateToggle({
     end,
 })
 
-local ESPTab = Window:CreateTab("ESP", nil)
-local ESPSection = ESPTab:CreateSection("无")
+local UniversalESP = {}
+UniversalESP.__index = UniversalESP
 
-local lockerESPConnection
-local lockerESPEnabled = false
-local lockerESPInstances = {}
-local lockerUpdateDelay = 1 -- 更新间隔(秒)
-local isUpdating = false
+local DEFAULT_CONFIG = {
+    UpdateInterval = 2,          -- 更新间隔(秒):Int
+    LoadWaitTime = 0.2,         -- 对象加载等待时间:Float
+    HighlightColor = Color3.fromRGB(0, 255, 0), 
+    LabelColor = Color3.fromRGB(255, 255, 255),  -- 标签颜色
+    LabelSize = 18,             -- 字体大小:Int
+    ShowDistance = true,        -- 显示距离:Bool
+    MaxDistance = 100,          -- 最大显示距离:Int
+    ExactMatch = true           -- 精确匹配:Bool
+}
 
-local function safeDestroy(obj)
-    pcall(function()
-        if obj and obj.Parent then
-            obj:Destroy()
+function UniversalESP.new(targetNames)
+    local self = setmetatable({}, UniversalESP)
+    self.Config = table.clone(DEFAULT_CONFIG)
+    self.TargetNames = type(targetNames) == "table" and targetNames or {targetNames}
+    self.Active = false
+    self.Instances = {}
+    self.Connections = {}
+    return self
+end
+
+function UniversalESP:_safeCall(func, ...)
+    local success, err = pcall(func, ...)
+    if not success then warn("ESP Error:", err) end
+end
+
+function UniversalESP:_getDistance(obj)
+    local char = game:GetService("Players").LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        return (char.HumanoidRootPart.Position - obj.Position).Magnitude
+    end
+    return math.huge
+end
+
+function UniversalESP:_createESP(obj)
+    if not obj or obj:FindFirstChild("UniversalESP_Marker") then return end
+
+    local marker = Instance.new("BoolValue")
+    marker.Name = "UniversalESP_Marker"
+    marker.Parent = obj
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "UniversalESP_Highlight"
+    highlight.Adornee = obj
+    highlight.FillTransparency = 0.6
+    highlight.OutlineTransparency = 0
+    highlight.FillColor = self.Config.HighlightColor
+    highlight.OutlineColor = Color3.fromRGB(255,255,255)
+    highlight.Parent = obj
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "UniversalESP_Billboard"
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = obj
+    billboard.Parent = obj
+
+    local label = Instance.new("TextLabel")
+    label.Text = obj.Name
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = self.Config.LabelSize
+    label.TextColor3 = self.Config.LabelColor
+    label.BackgroundTransparency = 1
+    label.TextStrokeTransparency = 0
+    label.TextStrokeColor3 = Color3.fromRGB(0,0,0)
+    label.Parent = billboard
+
+    table.insert(self.Instances, {
+        Object = obj,
+        Marker = marker,
+        Highlight = highlight,
+        Billboard = billboard,
+        Label = label
+    })
+
+    if self.Config.ShowDistance then
+        table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+            self:_safeCall(function()
+                local dist = self:_getDistance(obj)
+                if dist <= self.Config.MaxDistance then
+                    label.Text = string.format("%s\n[%dm]", obj.Name, math.floor(dist))
+                    billboard.Enabled = true
+                else
+                    billboard.Enabled = false
+                end
+            end)
+        end))
+    end
+end
+
+function UniversalESP:_isTarget(obj)
+    if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
+    
+    for _, name in ipairs(self.TargetNames) do
+        if self.Config.ExactMatch then
+            if obj.Name == name then return true end
+        else
+            if string.find(obj.Name, name) then return true end
+        end
+    end
+    return false
+end
+
+function UniversalESP:_scanAndAdd(parent)
+    self:_safeCall(function()
+        for _, obj in ipairs(parent:GetDescendants()) do
+            if self:_isTarget(obj) then
+                self:_createESP(obj)
+            end
         end
     end)
 end
 
-local function clearLockerESP()
-    for _, instance in pairs(lockerESPInstances) do
-        safeDestroy(instance)
+function UniversalESP:Start()
+    if self.Active then return end
+    self.Active = true
+    self:_scanAndAdd(game:GetService("Workspace"))
+    table.insert(self.Connections, game:GetService("Workspace").DescendantAdded:Connect(function(obj)
+        if self:_isTarget(obj) then
+            task.wait(self.Config.LoadWaitTime)
+            self:_createESP(obj)
+        end
+    end))
+    table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+        if os.clock() - (self._lastUpdate or 0) > self.Config.UpdateInterval then
+            self:_scanAndAdd(game:GetService("Workspace"))
+            self._lastUpdate = os.clock()
+        end
+    end))
+end
+
+function UniversalESP:Stop()
+    if not self.Active then return end
+    self.Active = false
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
     end
-    lockerESPInstances = {}
+    self.Connections = {}
+    for _, data in ipairs(self.Instances) do
+        self:_safeCall(function()
+            data.Highlight:Destroy()
+            data.Billboard:Destroy()
+            data.Marker:Destroy()
+        end)
+    end
+    self.Instances = {}
 end
 
-local function setupLockerESP(locker)
-    if not locker or not locker.Parent then return end
-    
-    -- 防止重复添加
-    if locker:FindFirstChild("LockerESP_Marker") then return end
-    
-    local marker = Instance.new("BoolValue")
-    marker.Name = "LockerESP_Marker"
-    marker.Parent = locker
-    
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "LockerESP_Highlight"
-    highlight.Adornee = locker
-    highlight.FillTransparency = 0.7
-    highlight.OutlineTransparency = 0.3
-    highlight.FillColor = Color3.fromRGB(0, 255, 0)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.Parent = locker
-
-    local billboardGui = Instance.new("BillboardGui")
-    billboardGui.Name = "LockerESP_Billboard"
-    billboardGui.Adornee = locker
-    billboardGui.Size = UDim2.new(0, 100, 0, 40)
-    billboardGui.StudsOffset = Vector3.new(0, 3, 0)
-    billboardGui.AlwaysOnTop = true
-    billboardGui.Parent = locker
-
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Text = "柜子"
-    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Size = UDim2.new(1, 0, 1, 0)
-    nameLabel.Font = Enum.Font.SourceSansBold
-    nameLabel.TextStrokeTransparency = 0
-    nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    nameLabel.Parent = billboardGui
-
-    table.insert(lockerESPInstances, highlight)
-    table.insert(lockerESPInstances, billboardGui)
-    table.insert(lockerESPInstances, marker)
-end
-
-local function findLockersInRoom(room)
-    local lockers = {}
-    local function scan(parent)
-        for _, child in ipairs(parent:GetChildren()) do
-            if child:IsA("Model") and (child.Name:find("Locker") or child.Name:match("柜")) then
-                table.insert(lockers, child)
-            end
-            scan(child) -- 递归搜索子对象
+function UniversalESP:SetConfig(config)
+    for k, v in pairs(config) do
+        if self.Config[k] ~= nil then
+            self.Config[k] = v
         end
     end
-    pcall(scan, room) -- 安全扫描
-    return lockers
+    return self
 end
 
-local function updateLockers()
-    if isUpdating then return end
-    isUpdating = true
-    
-    -- 分步处理避免卡顿
-    local startTime = os.clock()
-    local processed = 0
-    
-    local roomsFolder = game:GetService("Workspace"):FindFirstChild("GameplayFolder")
-    if roomsFolder then
-        roomsFolder = roomsFolder:FindFirstChild("Rooms")
-        if roomsFolder then
-            for _, room in ipairs(roomsFolder:GetChildren()) do
-                local lockers = findLockersInRoom(room)
-                for _, locker in ipairs(lockers) do
-                    setupLockerESP(locker)
-                    processed = processed + 1
-                    
-                    -- 每处理10个柜子检查一次时间，防止卡顿
-                    if processed % 10 == 0 and (os.clock() - startTime) > 0.1 then
-                        task.wait()
-                        startTime = os.clock()
-                    end
-                end
-            end
-        end
-    end
-    
-    isUpdating = false
-    return processed
-end
+local LockerESP = UniversalESP.new({"Locker", "柜子"})
 
-local function lockerESPLoop()
-    while lockerESPEnabled do
-        local processed = updateLockers()
-        if processed == 0 then
-            -- 如果没有找到柜子，等待更长时间再重试
-            task.wait(5)
-        else
-            task.wait(lockerUpdateDelay)
-        end
-    end
-end
-
-local function startLockerESP()
-    -- 初始清理
-    clearLockerESP()
-    
-    -- 设置监听
-    local roomsFolder = game:GetService("Workspace"):FindFirstChild("GameplayFolder")
-    if roomsFolder then
-        roomsFolder = roomsFolder:FindFirstChild("Rooms")
-        if roomsFolder then
-            lockerESPConnection = roomsFolder.DescendantAdded:Connect(function(descendant)
-                if descendant:IsA("Model") and (descendant.Name:find("Locker") or descendant.Name:match("柜")) then
-                    task.wait(0.5) -- 等待对象完全加载
-                    setupLockerESP(descendant)
-                end
-            end)
-        end
-    end
-    
-    -- 启动更新循环
-    spawn(lockerESPLoop)
-end
-
-local Toggle = ESPTab:CreateToggle({
-    Name = "透视柜子",
-    CurrentValue = false,
-    Flag = "nil",
-    Callback = function(Value)
-        lockerESPEnabled = Value
-        if Value then
-            spawn(startLockerESP)
-        else
-            if lockerESPConnection then
-                lockerESPConnection:Disconnect()
-                lockerESPConnection = nil
-            end
-            clearLockerESP()
-        end
-    end,
+LockerESP:SetConfig({
+    HighlightColor = Color3.fromRGB(0, 200, 255),
+    MaxDistance = 500
 })
+
+
+local Toggle = MainTab:CreateToggle({
+    Name = "柜子透视",
+    Callback = function(v) 
+        if v then LockerESP:Start() else LockerESP:Stop() end 
+    end
+})
+
