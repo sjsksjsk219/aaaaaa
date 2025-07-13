@@ -109,111 +109,60 @@ local Toggle = MainTab:CreateToggle({
     end,
 })
 
-local InvincibleToggle = MainTab:CreateToggle({
-    Name = "无敌模式",
+local MainTab = Window:CreateTab("ESP",nil)
+local MainSection = MainTab:CreateSection("无")
+
+local Toggle = MainTab:CreateToggle({
+    Name = "透视柜子",
     CurrentValue = false,
-    Flag = "无",
+    Flag = "nil",
     Callback = function(Value)
-        if Value then
-            local function findLockers()
-                local lockers = {}
-                local gameplayFolder = workspace:FindFirstChild("GameplayFolder")
-                if not gameplayFolder then
-                    warn("未找到 GameplayFolder！")
-                    return lockers
-                end
+        local Players = game:GetService("Players")
+        local Workspace = game:GetService("Workspace")
+        local player = Players.LocalPlayer
+        local function setupLockerESP(locker)
+            local highlight = Instance.new("Highlight")
+            highlight.Adornee = locker
+            highlight.FillTransparency = 0.7 -- 30% 可见度
+            highlight.OutlineTransparency = 0.3
+            highlight.FillColor = Color3.fromRGB(0, 255, 0)
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255) 
+            highlight.Parent = locker
+            local billboardGui = Instance.new("BillboardGui")
+            billboardGui.Adornee = locker
+            billboardGui.Size = UDim2.new(0, 100, 0, 40)
+            billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+            billboardGui.AlwaysOnTop = true
+            billboardGui.Parent = locker
 
-                local rooms = gameplayFolder:FindFirstChild("Rooms")
-                if not rooms then
-                    warn("未找到 Rooms 文件夹！")
-                    return lockers
-                end
-
-                for _, roomType in pairs(rooms:GetChildren()) do
-                    for _, room in pairs(roomType:GetChildren()) do
-                        local locker = room:FindFirstChild("Locker") or (room:GetChildren()[25] and room:GetChildren()[25]:FindFirstChild("Locker"))
-                        if locker and locker.Parent:FindFirstChild("Enter") then
-                            table.insert(lockers, locker)
-                            print("找到柜子:", locker:GetFullName())
-                        end
-                    end
-                end
-                return lockers
-            end
-
-            local function checkInvincible()
-                if not _G.InvincibleActive then
-                    Rayfield:Notify({
-                        Title = "无敌模式",
-                        Content = "请靠近任意柜子以触发无敌！",
-                        Duration = 5,
-                    })
-                end
-            end
-
-            _G.InvincibleCheckLoop = game:GetService("RunService").Heartbeat:Connect(function()
-                if _G.InvincibleLastCheck == nil or os.time() - _G.InvincibleLastCheck >= 10 then
-                    _G.InvincibleLastCheck = os.time()
-                    checkInvincible()
-                end
-            end)
-            _G.InvincibleConnection = game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
-                local humanoid = char:WaitForChild("Humanoid")
-                local rootPart = char:WaitForChild("HumanoidRootPart")
-
-                humanoid.Died:Connect(function()
-                    Rayfield:Notify({
-                        Title = "警告",
-                        Content = "无敌模式已失效！",
-                        Duration = 5,
-                    })
-                    _G.InvincibleActive = false
-                end)
-
-                while humanoid and humanoid.Health > 0 do
-                    local lockers = findLockers()
-                    if #lockers == 0 then
-                        warn("未找到任何柜子！")
-                        task.wait(5)
-                    else
-                        local triggered = false
-                        for _, locker in pairs(lockers) do
-                            local distance = (rootPart.Position - locker.Position).Magnitude
-                            if distance < 15 then
-                                local enterEvent = locker.Parent:FindFirstChild("Enter")
-                                if enterEvent then
-                                    local success, err = pcall(function()
-                                        enterEvent:InvokeServer(true)
-                                        print("触发无敌成功！柜子:", locker:GetFullName())
-                                    end)
-                                    if success then
-                                        _G.InvincibleActive = true
-                                        triggered = true
-                                        break
-                                    else
-                                        warn("触发无敌失败:", err)
-                                    end
-                                else
-                                    warn("柜子父级没有 Enter 事件！")
-                                end
-                            end
-                        end
-                        if triggered then break end
-                    end
-                    task.wait(1)
-                end
-            end)
-        else
-            if _G.InvincibleConnection then
-                _G.InvincibleConnection:Disconnect()
-                _G.InvincibleConnection = nil
-            end
-            if _G.InvincibleCheckLoop then
-                _G.InvincibleCheckLoop:Disconnect()
-                _G.InvincibleCheckLoop = nil
-            end
-            _G.InvincibleActive = false
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Text = "柜子" -- 可以改成 locker.Name
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Size = UDim2.new(1, 0, 1, 0)
+            nameLabel.Font = Enum.Font.SourceSansBold
+            nameLabel.TextStrokeTransparency = 0 -- 文字描边
+            nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+           nameLabel.Parent = billboardGui
         end
+
+        local function findAndSetupLockers()
+            local roomsFolder = Workspace.GameplayFolder.Rooms
+            for _, roomType in ipairs(roomsFolder:GetChildren()) do
+                local locker = roomType:FindFirstChild("Locker")
+                if locker then
+                    setupLockerESP(locker)
+                end
+            end
+        end
+        findAndSetupLockers()
+
+        roomsFolder.ChildAdded:Connect(function(roomType)
+            task.wait(1)
+            local locker = roomType:FindFirstChild("Locker")
+            if locker then
+                setupLockerESP(locker)
+            end
+        end)
     end,
-}))
-  
+})
