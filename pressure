@@ -277,14 +277,50 @@ function UniversalESP:SetConfig(config)
     end
     return self
 end
-
+--[[
+    "workspace.GameplayFolder.Rooms.LeftStraight1["6BigDrawers"].SpawnLocations:GetChildren()[3]["Currency5-1"]",
+    "workspace.GameplayFolder.Rooms.LeftStraight1:GetChildren()[13].SpawnLocations:GetChildren()[8]["Currency25-4"]",
+    "workspace.GameplayFolder.Rooms.LeftStraight1:GetChildren()[13].SpawnLocations:GetChildren()[3]["Currency10-4"]"
+]]--
 local LockerESP = UniversalESP.new({"Locker", "柜子"})
+local DoorESP = UniversalESP.new({"Door","门"})
+local Money5ESP = UniversalESP.new({"Money","钱5"})
+local Money25ESP = UniversalESP.new({"Money","钱25"})
+local Money10ESP = UniversalESP.new({"Money","钱10"})
 
 LockerESP:SetConfig({
     HighlightColor = Color3.fromRGB(0, 200, 255),
+    LabelSide = 10,
     MaxDistance = 500
 })
 
+DoorESP:SetConfig({
+    highlightColor = Color3,fromRGB(144,238,144)
+})
+
+Money5ESP:SetConflg({
+    HighlightColor = Color3.fromRGB(230,190,138),
+    LabelSide = 8,
+    MaxDistance = 200,
+    ShowDistance = false
+})
+
+Money25ESP:SetConflg({
+    HighlightColor = Color3.fromRGB(230,190,138),
+    LabelSide = 8,
+    MaxDistance = 200,
+    ShowDistance = false
+})
+
+Money10ESP:SetConflg({
+    HighlightColor = Color3.fromRGB(230,190,138),
+    LabelSide = 8,
+    MaxDistance = 200,
+    ShowDistance = false
+})
+
+local MainTab = Window:CreateTab("ESP",nil)
+local MainSection = MainTab:CreateSection("无")
 
 local Toggle = MainTab:CreateToggle({
     Name = "柜子透视",
@@ -293,3 +329,24 @@ local Toggle = MainTab:CreateToggle({
     end
 })
 
+local Toggle = MainTab:CreateToggle({
+    Name = "门透视",
+    Callback = function(v)
+        if v then DoorESP:Start() else DoorESP:Stop() end
+    end
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "钱透视",
+    Callback = function(v)
+        if v then
+            Money5ESP:Start()
+            Money10ESP:Start()
+            Money25ESP:Start()
+        else
+            Money5ESP:Stop()
+            Money10ESP:Stop()
+            Money25ESP:Stop()
+        end
+    end
+})
