@@ -347,12 +347,8 @@ local Toggle = MainTab:CreateToggle({
     Callback = function(v)
         if v then
             Money5ESP:Start()
-            Money10ESP:Start()
-            Money25ESP:Start()
         else
             Money5ESP:Stop()
-            Money10ESP:Stop()
-            Money25ESP:Stop()
         end
     end
 })
