@@ -329,8 +329,8 @@ local Toggle = MainTab:CreateToggle({
     Name = "柜子透视",
     CurrentValue = false,
     Flag = "nil",
-    Callback = function(v) 
-        if v then LockerESP:Start() else LockerESP:Stop() end 
+    Callback = function(Value) 
+        if Value then LockerESP:Start() else LockerESP:Stop() end 
     end,
 })
 
@@ -338,8 +338,8 @@ local Toggle = MainTab:CreateToggle({
     Name = "门透视",
     CurrentValue = false,
     Flag = "nil",
-    Callback = function(v)
-        if v then DoorESP:Start() else DoorESP:Stop() end
+    Callback = function(Value)
+        if Value then DoorESP:Start() else DoorESP:Stop() end
     end,
 })
 
@@ -347,8 +347,8 @@ local Toggle = MainTab:CreateToggle({
     Name = "钱透视",
     CurrentValue = false,
     Flag = "nil",
-    Callback = function(v)
-        if v then
+    Callback = function(Value)
+        if Value then
             Money5ESP:Start()
             Money10ESP:Start()
             Money25ESP:Start()
