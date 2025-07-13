@@ -1,53 +1,54 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-  local Window = Rayfield:CreateWindow({
+local Window = Rayfield:CreateWindow({
     Name = "压力脚本",
     LoadingTitle = "压力脚本",
     LoadingSubtitle = "by sjsksjsk",
     ConfigurationSaving = {
-      Enabled = false,
-      FoldrName = nil,
-      FileName = "脚本"
-      },
+        Enabled = false,
+        FolderName = nil,
+        FileName = "脚本"
+    },
     Discord = {
-      Enabled = false,
-      Invite = "discord.gg/Mspaint",
-      RememberJoins = true
-      },
+        Enabled = false,
+        Invite = "discord.gg/Mspaint",
+        RememberJoins = true
+    },
     KeySystem = false,
     KeySettings = {
-      Title ="压力脚本卡密系统",
-      Subtitle = "点击获取链接",
-      Note = "无",
-      FileName = "Pressure Link",
-      SaveKey = false,
-      GrabKeyFromSite = true,
-      Key = {"https://pastebin.com/raw/kVe5WMyJ"}
-      }
-    })
-local MainTab = Window:CreateTab("主要",nil)
+        Title = "压力脚本卡密系统",
+        Subtitle = "点击获取链接",
+        Note = "无",
+        FileName = "Pressure Link",
+        SaveKey = false,
+        GrabKeyFromSite = true,
+        Key = {"https://pastebin.com/raw/kVe5WMyJ"}
+    }
+})
+
+local MainTab = Window:CreateTab("主要", nil)
 local MainSection = MainTab:CreateSection("无")
 
 Rayfield:Notify({
-  Title ="欢迎使用本脚本",
-  Content = "开的时候演都不要演",
-  Duration = 2,
-  Image = nil,
-  Actions = {
-    Ignore = {
-      Name = "好的",
-      Callback = function()
-        print("用户点了好的")
-        end
-      },
+    Title = "欢迎使用本脚本",
+    Content = "开的时候演都不要演",
+    Duration = 2,
+    Image = nil,
+    Actions = {
+        Ignore = {
+            Name = "好的",
+            Callback = function()
+                print("用户点了好的")
+            end
+        },
     },
 })
-  
+
 local Input = MainTab:CreateInput({
     Name = "速度调节",
     PlaceholderText = "请输入速度",
     RemoveTextAfterFocusLost = true,
     Callback = function(Text)
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = (Text)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = tonumber(Text) or 16
     end,
 })
 
@@ -56,16 +57,22 @@ local Toggle = MainTab:CreateToggle({
     CurrentValue = false,
     Flag = "无",
     Callback = function(Value)
-        game:GetService("RunService").Stepped:Connect(function()
-            for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
+        if Value then
+            _G.NoclipConnection = game:GetService("RunService").Stepped:Connect(function()
+                for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
                 end
+            end)
+        else
+            if _G.NoclipConnection then
+                _G.NoclipConnection:Disconnect()
             end
         end
-    )end,
+    end,
 })
- 
+
 local Toggle = MainTab:CreateToggle({
     Name = "怪来提醒",
     CurrentValue = false,
@@ -109,45 +116,62 @@ local Toggle = MainTab:CreateToggle({
     end,
 })
 
-local MainTab = Window:CreateTab("ESP",nil)
-local MainSection = MainTab:CreateSection("无")
+local ESPTab = Window:CreateTab("ESP", nil)
+local ESPSection = ESPTab:CreateSection("无")
 
-local Toggle = MainTab:CreateToggle({
-    Name = "透视柜子",
-    CurrentValue = false,
-    Flag = "nil",
-    Callback = function(Value)
-        local Players = game:GetService("Players")
-        local Workspace = game:GetService("Workspace")
-        local player = Players.LocalPlayer
-        local function setupLockerESP(locker)
-            local highlight = Instance.new("Highlight")
-            highlight.Adornee = locker
-            highlight.FillTransparency = 0.7 -- 30% 可见度
-            highlight.OutlineTransparency = 0.3
-            highlight.FillColor = Color3.fromRGB(0, 255, 0)
-            highlight.OutlineColor = Color3.fromRGB(255, 255, 255) 
-            highlight.Parent = locker
-            local billboardGui = Instance.new("BillboardGui")
-            billboardGui.Adornee = locker
-            billboardGui.Size = UDim2.new(0, 100, 0, 40)
-            billboardGui.StudsOffset = Vector3.new(0, 3, 0)
-            billboardGui.AlwaysOnTop = true
-            billboardGui.Parent = locker
+local lockerESPConnection
+local lockerESPEnabled = false
+local lockerESPInstances = {}
 
-            local nameLabel = Instance.new("TextLabel")
-            nameLabel.Text = "柜子" -- 可以改成 locker.Name
-            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            nameLabel.BackgroundTransparency = 1
-            nameLabel.Size = UDim2.new(1, 0, 1, 0)
-            nameLabel.Font = Enum.Font.SourceSansBold
-            nameLabel.TextStrokeTransparency = 0 -- 文字描边
-            nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-           nameLabel.Parent = billboardGui
+local function clearLockerESP()
+    for _, locker in pairs(lockerESPInstances) do
+        if locker:FindFirstChild("Highlight") then
+            locker.Highlight:Destroy()
         end
+        if locker:FindFirstChild("BillboardGui") then
+            locker.BillboardGui:Destroy()
+        end
+    end
+    lockerESPInstances = {}
+end
 
-        local function findAndSetupLockers()
-            local roomsFolder = Workspace.GameplayFolder.Rooms
+local function setupLockerESP(locker)
+    if not locker:FindFirstChild("Highlight") then
+        local highlight = Instance.new("Highlight")
+        highlight.Adornee = locker
+        highlight.FillTransparency = 0.7
+        highlight.OutlineTransparency = 0.3
+        highlight.FillColor = Color3.fromRGB(0, 255, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.Parent = locker
+
+        local billboardGui = Instance.new("BillboardGui")
+        billboardGui.Adornee = locker
+        billboardGui.Size = UDim2.new(0, 100, 0, 40)
+        billboardGui.StudsOffset = Vector3.new(0, 3, 0)
+        billboardGui.AlwaysOnTop = true
+        billboardGui.Parent = locker
+
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Text = "柜子"
+        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Size = UDim2.new(1, 0, 1, 0)
+        nameLabel.Font = Enum.Font.SourceSansBold
+        nameLabel.TextStrokeTransparency = 0
+        nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        nameLabel.Parent = billboardGui
+
+        table.insert(lockerESPInstances, locker)
+    end
+end
+
+local function updateLockers()
+    clearLockerESP()
+    local roomsFolder = game.Workspace:FindFirstChild("GameplayFolder")
+    if roomsFolder then
+        roomsFolder = roomsFolder:FindFirstChild("Rooms")
+        if roomsFolder then
             for _, roomType in ipairs(roomsFolder:GetChildren()) do
                 local locker = roomType:FindFirstChild("Locker")
                 if locker then
@@ -155,14 +179,46 @@ local Toggle = MainTab:CreateToggle({
                 end
             end
         end
-        findAndSetupLockers()
+    end
+end
 
-        roomsFolder.ChildAdded:Connect(function(roomType)
-            task.wait(1)
-            local locker = roomType:FindFirstChild("Locker")
-            if locker then
-                setupLockerESP(locker)
+local function startLockerESP()
+    updateLockers()
+    
+    local roomsFolder = game.Workspace:FindFirstChild("GameplayFolder")
+    if roomsFolder then
+        roomsFolder = roomsFolder:FindFirstChild("Rooms")
+        if roomsFolder then
+            lockerESPConnection = roomsFolder.ChildAdded:Connect(function(roomType)
+                task.wait(1)
+                local locker = roomType:FindFirstChild("Locker")
+                if locker then
+                    setupLockerESP(locker)
+                end
+            end)
+        end
+    end
+    
+    while lockerESPEnabled do
+        updateLockers()
+        wait(5)
+    end
+end
+
+local Toggle = ESPTab:CreateToggle({
+    Name = "透视柜子",
+    CurrentValue = false,
+    Flag = "nil",
+    Callback = function(Value)
+        lockerESPEnabled = Value
+        if Value then
+            spawn(startLockerESP)
+        else
+            if lockerESPConnection then
+                lockerESPConnection:Disconnect()
+                lockerESPConnection = nil
             end
-        end)
+            clearLockerESP()
+        end
     end,
 })
