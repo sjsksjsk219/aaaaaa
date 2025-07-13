@@ -298,21 +298,21 @@ DoorESP:SetConfig({
     highlightColor = Color3,fromRGB(144,238,144)
 })
 
-Money5ESP:SetConflg({
+Money5ESP:SetConfig({
     HighlightColor = Color3.fromRGB(230,190,138),
     LabelSide = 8,
     MaxDistance = 200,
     ShowDistance = false
 })
 
-Money25ESP:SetConflg({
+Money25ESP:SetConfig({
     HighlightColor = Color3.fromRGB(230,190,138),
     LabelSide = 8,
     MaxDistance = 200,
     ShowDistance = false
 })
 
-Money10ESP:SetConflg({
+Money10ESP:SetConfig({
     HighlightColor = Color3.fromRGB(230,190,138),
     LabelSide = 8,
     MaxDistance = 200,
@@ -347,8 +347,12 @@ local Toggle = MainTab:CreateToggle({
     Callback = function(v)
         if v then
             Money5ESP:Start()
+            Money10ESP:Start()
+            Money25ESP:Start()
         else
             Money5ESP:Stop()
+            Money10ESP:Stop()
+            Money25ESP:Stop()
         end
     end
 })
