@@ -124,20 +124,22 @@ local lockerESPEnabled = false
 local lockerESPInstances = {}
 
 local function clearLockerESP()
-    for _, locker in pairs(lockerESPInstances) do
-        if locker:FindFirstChild("Highlight") then
-            locker.Highlight:Destroy()
-        end
-        if locker:FindFirstChild("BillboardGui") then
-            locker.BillboardGui:Destroy()
+    for _, instance in pairs(lockerESPInstances) do
+        if instance:IsA("Highlight") or instance:IsA("BillboardGui") then
+            instance:Destroy()
         end
     end
     lockerESPInstances = {}
 end
 
 local function setupLockerESP(locker)
-    if not locker:FindFirstChild("Highlight") then
+    if not locker:FindFirstChild("LockerESP") then
+        local espMarker = Instance.new("BoolValue")
+        espMarker.Name = "LockerESP"
+        espMarker.Parent = locker
+        
         local highlight = Instance.new("Highlight")
+        highlight.Name = "LockerHighlight"
         highlight.Adornee = locker
         highlight.FillTransparency = 0.7
         highlight.OutlineTransparency = 0.3
@@ -146,6 +148,7 @@ local function setupLockerESP(locker)
         highlight.Parent = locker
 
         local billboardGui = Instance.new("BillboardGui")
+        billboardGui.Name = "LockerBillboard"
         billboardGui.Adornee = locker
         billboardGui.Size = UDim2.new(0, 100, 0, 40)
         billboardGui.StudsOffset = Vector3.new(0, 3, 0)
@@ -162,19 +165,29 @@ local function setupLockerESP(locker)
         nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         nameLabel.Parent = billboardGui
 
-        table.insert(lockerESPInstances, locker)
+        table.insert(lockerESPInstances, highlight)
+        table.insert(lockerESPInstances, billboardGui)
+        table.insert(lockerESPInstances, espMarker)
     end
 end
 
-local function updateLockers()
+local function updateAllLockers()
     clearLockerESP()
+    
     local roomsFolder = game.Workspace:FindFirstChild("GameplayFolder")
     if roomsFolder then
         roomsFolder = roomsFolder:FindFirstChild("Rooms")
         if roomsFolder then
             for _, roomType in ipairs(roomsFolder:GetChildren()) do
-                local locker = roomType:FindFirstChild("Locker")
-                if locker then
+                -- 查找所有柜子，包括名称包含"Locker"的实例
+                local lockers = {}
+                for _, descendant in ipairs(roomType:GetDescendants()) do
+                    if descendant.Name:find("Locker") or descendant:IsA("Model") and descendant.Name:match("柜") then
+                        table.insert(lockers, descendant)
+                    end
+                end
+                
+                for _, locker in ipairs(lockers) do
                     setupLockerESP(locker)
                 end
             end
@@ -183,24 +196,23 @@ local function updateLockers()
 end
 
 local function startLockerESP()
-    updateLockers()
+    updateAllLockers()
     
     local roomsFolder = game.Workspace:FindFirstChild("GameplayFolder")
     if roomsFolder then
         roomsFolder = roomsFolder:FindFirstChild("Rooms")
         if roomsFolder then
-            lockerESPConnection = roomsFolder.ChildAdded:Connect(function(roomType)
-                task.wait(1)
-                local locker = roomType:FindFirstChild("Locker")
-                if locker then
-                    setupLockerESP(locker)
+            lockerESPConnection = roomsFolder.DescendantAdded:Connect(function(descendant)
+                if descendant.Name:find("Locker") or descendant:IsA("Model") and descendant.Name:match("柜") then
+                    task.wait(0.5) -- 等待确保对象完全加载
+                    setupLockerESP(descendant)
                 end
             end)
         end
     end
     
     while lockerESPEnabled do
-        updateLockers()
+        updateAllLockers()
         wait(5)
     end
 end
