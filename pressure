@@ -1,0 +1,219 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+  local Window = Rayfield:CreateWindow({
+    Name = "压力脚本",
+    LoadingTitle = "压力脚本",
+    LoadingSubtitle = "by sjsksjsk",
+    ConfigurationSaving = {
+      Enabled = false,
+      FoldrName = nil,
+      FileName = "脚本"
+      },
+    Discord = {
+      Enabled = false,
+      Invite = "discord.gg/Mspaint",
+      RememberJoins = true
+      },
+    KeySystem = false,
+    KeySettings = {
+      Title ="压力脚本卡密系统",
+      Subtitle = "点击获取链接",
+      Note = "无",
+      FileName = "Pressure Link",
+      SaveKey = false,
+      GrabKeyFromSite = true,
+      Key = {"https://pastebin.com/raw/kVe5WMyJ"}
+      }
+    })
+local MainTab = Window:CreateTab("主要",nil)
+local MainSection = MainTab:CreateSection("无")
+
+Rayfield:Notify({
+  Title ="欢迎使用本脚本",
+  Content = "开的时候演都不要演",
+  Duration = 2,
+  Image = nil,
+  Actions = {
+    Ignore = {
+      Name = "好的",
+      Callback = function()
+        print("用户点了好的")
+        end
+      },
+    },
+})
+  
+local Input = MainTab:CreateInput({
+    Name = "速度调节",
+    PlaceholderText = "请输入速度",
+    RemoveTextAfterFocusLost = true,
+    Callback = function(Text)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = (Text)
+    end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "穿墙",
+    CurrentValue = false,
+    Flag = "无",
+    Callback = function(Value)
+        game:GetService("RunService").Stepped:Connect(function()
+            for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    )end,
+})
+ 
+local Toggle = MainTab:CreateToggle({
+    Name = "怪来提醒",
+    CurrentValue = false,
+    Flag = "无",
+    Callback = function(Value)
+        if Value then
+            if _G.MonsterAlertConnection then
+                _G.MonsterAlertConnection:Disconnect()
+            end
+
+            local lastAlert = {}
+            local function notifyMonster(monsterName)
+                local currentTime = os.time()
+                if lastAlert[monsterName] and currentTime - lastAlert[monsterName] < 5 then return end
+                lastAlert[monsterName] = currentTime
+
+                Rayfield:Notify({
+                    Title = "警告!",
+                    Content = monsterName .. "已生成!",
+                    Duration = 5,
+                })
+
+                if _G.MonsterAlertChatEnabled then
+                    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(
+                        "[压力脚本] " .. monsterName .. " 已生成！", "All"
+                    )
+                end
+            end
+
+            _G.MonsterAlertConnection = game.Workspace.ChildAdded:Connect(function(child)
+                if table.find({"Angler", "Pink", "Blitz"}, child.Name) then
+                    notifyMonster(child.Name)
+                end
+            end)
+        else
+            if _G.MonsterAlertConnection then
+                _G.MonsterAlertConnection:Disconnect()
+                _G.MonsterAlertConnection = nil
+            end
+        end
+    end,
+})
+
+local InvincibleToggle = MainTab:CreateToggle({
+    Name = "无敌模式",
+    CurrentValue = false,
+    Flag = "无",
+    Callback = function(Value)
+        if Value then
+            local function findLockers()
+                local lockers = {}
+                local gameplayFolder = workspace:FindFirstChild("GameplayFolder")
+                if not gameplayFolder then
+                    warn("未找到 GameplayFolder！")
+                    return lockers
+                end
+
+                local rooms = gameplayFolder:FindFirstChild("Rooms")
+                if not rooms then
+                    warn("未找到 Rooms 文件夹！")
+                    return lockers
+                end
+
+                for _, roomType in pairs(rooms:GetChildren()) do
+                    for _, room in pairs(roomType:GetChildren()) do
+                        local locker = room:FindFirstChild("Locker") or (room:GetChildren()[25] and room:GetChildren()[25]:FindFirstChild("Locker"))
+                        if locker and locker.Parent:FindFirstChild("Enter") then
+                            table.insert(lockers, locker)
+                            print("找到柜子:", locker:GetFullName())
+                        end
+                    end
+                end
+                return lockers
+            end
+
+            local function checkInvincible()
+                if not _G.InvincibleActive then
+                    Rayfield:Notify({
+                        Title = "无敌模式",
+                        Content = "请靠近任意柜子以触发无敌！",
+                        Duration = 5,
+                    })
+                end
+            end
+
+            _G.InvincibleCheckLoop = game:GetService("RunService").Heartbeat:Connect(function()
+                if _G.InvincibleLastCheck == nil or os.time() - _G.InvincibleLastCheck >= 10 then
+                    _G.InvincibleLastCheck = os.time()
+                    checkInvincible()
+                end
+            end)
+            _G.InvincibleConnection = game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+                local humanoid = char:WaitForChild("Humanoid")
+                local rootPart = char:WaitForChild("HumanoidRootPart")
+
+                humanoid.Died:Connect(function()
+                    Rayfield:Notify({
+                        Title = "警告",
+                        Content = "无敌模式已失效！",
+                        Duration = 5,
+                    })
+                    _G.InvincibleActive = false
+                end)
+
+                while humanoid and humanoid.Health > 0 do
+                    local lockers = findLockers()
+                    if #lockers == 0 then
+                        warn("未找到任何柜子！")
+                        task.wait(5)
+                    else
+                        local triggered = false
+                        for _, locker in pairs(lockers) do
+                            local distance = (rootPart.Position - locker.Position).Magnitude
+                            if distance < 15 then
+                                local enterEvent = locker.Parent:FindFirstChild("Enter")
+                                if enterEvent then
+                                    local success, err = pcall(function()
+                                        enterEvent:InvokeServer(true)
+                                        print("触发无敌成功！柜子:", locker:GetFullName())
+                                    end)
+                                    if success then
+                                        _G.InvincibleActive = true
+                                        triggered = true
+                                        break
+                                    else
+                                        warn("触发无敌失败:", err)
+                                    end
+                                else
+                                    warn("柜子父级没有 Enter 事件！")
+                                end
+                            end
+                        end
+                        if triggered then break end
+                    end
+                    task.wait(1)
+                end
+            end)
+        else
+            if _G.InvincibleConnection then
+                _G.InvincibleConnection:Disconnect()
+                _G.InvincibleConnection = nil
+            end
+            if _G.InvincibleCheckLoop then
+                _G.InvincibleCheckLoop:Disconnect()
+                _G.InvincibleCheckLoop = nil
+            end
+            _G.InvincibleActive = false
+        end
+    end,
+}))
+  
