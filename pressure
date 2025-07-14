@@ -298,7 +298,7 @@ LockerESP:SetConfig({
 })
 
 DoorESP:SetConfig({
-    HighlightColor = Color3,fromRGB(144,238,144)
+    HighlightColor = Color3.fromRGB(144,238,144)
 })
 
 Money5ESP:SetConfig({
@@ -343,8 +343,12 @@ local Toggle = MainTab:CreateToggle({
     Callback = function(Value)
         if Value then
             Money5ESP:Start()
+            Money10ESP:Start()
+            Money25ESP:Start()
         else
             Money5ESP:Stop()
+            Money10ESP:Stop()
+            Money25ESP:Stop()
         end
     end,
 })
