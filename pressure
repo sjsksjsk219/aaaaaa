@@ -293,31 +293,31 @@ local Money10ESP = UniversalESP.new({"Money","钱10"})
 
 LockerESP:SetConfig({
     HighlightColor = Color3.fromRGB(0, 200, 255),
-    LabelSide = 10,
+    LabelSize = 10,
     MaxDistance = 500
 })
 
 DoorESP:SetConfig({
-    highlightColor = Color3,fromRGB(144,238,144)
+    HighlightColor = Color3,fromRGB(144,238,144)
 })
 
 Money5ESP:SetConfig({
     HighlightColor = Color3.fromRGB(230,190,138),
-    LabelSide = 8,
+    LabelSize = 8,
     MaxDistance = 200,
     ShowDistance = false
 })
 
 Money25ESP:SetConfig({
     HighlightColor = Color3.fromRGB(230,190,138),
-    LabelSide = 8,
+    LabelSize = 8,
     MaxDistance = 200,
     ShowDistance = false
 })
 
 Money10ESP:SetConfig({
     HighlightColor = Color3.fromRGB(230,190,138),
-    LabelSide = 8,
+    LabelSize = 8,
     MaxDistance = 200,
     ShowDistance = false
 })
