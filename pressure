@@ -119,22 +119,26 @@ local Toggle = MainTab:CreateToggle({
     end,
 })
 
-local UniversalESP = {}
-UniversalESP.__index = UniversalESP
+local AdvancedESP = {}
+AdvancedESP.__index = AdvancedESP
 
 local DEFAULT_CONFIG = {
-    UpdateInterval = 2,          -- 更新间隔(秒):Int
-    LoadWaitTime = 0.2,         -- 对象加载等待时间:Float
-    HighlightColor = Color3.fromRGB(0, 255, 0), 
+    UpdateInterval = 2,              -- 更新间隔(秒)
+    LoadWaitTime = 0.3,             -- 对象加载等待时间
+    HighlightColor = Color3.fromRGB(0, 255, 0),  -- 高亮颜色
     LabelColor = Color3.fromRGB(255, 255, 255),  -- 标签颜色
-    LabelSize = 18,             -- 字体大小:Int
-    ShowDistance = true,        -- 显示距离:Bool
-    MaxDistance = 100,          -- 最大显示距离:Int
-    ExactMatch = true           -- 精确匹配:Bool
+    LabelSize = 18,                 -- 字体大小
+    ShowDistance = true,            -- 是否显示距离
+    MaxDistance = 200,              -- 最大显示距离
+    ExactMatch = true,              -- 是否精确匹配名称
+    CheckMarker = false,            -- 是否检测标志物
+    MarkerName = "IsTarget",        -- 标志物名称
+    SearchPath = "Workspace",       -- 默认搜索路径
+    ScanRecursive = true            -- 是否递归搜索子目录
 }
 
-function UniversalESP.new(targetNames)
-    local self = setmetatable({}, UniversalESP)
+function AdvancedESP.new(targetNames)
+    local self = setmetatable({}, AdvancedESP)
     self.Config = table.clone(DEFAULT_CONFIG)
     self.TargetNames = type(targetNames) == "table" and targetNames or {targetNames}
     self.Active = false
@@ -143,12 +147,22 @@ function UniversalESP.new(targetNames)
     return self
 end
 
-function UniversalESP:_safeCall(func, ...)
+function AdvancedESP:_safeCall(func, ...)
     local success, err = pcall(func, ...)
     if not success then warn("ESP Error:", err) end
 end
 
-function UniversalESP:_getDistance(obj)
+function AdvancedESP:_getFromPath(path)
+    local parts = string.split(path, ".")
+    local current = game
+    for _, part in ipairs(parts) do
+        if not current then return nil end
+        current = current:FindFirstChild(part)
+    end
+    return current
+end
+
+function AdvancedESP:_getDistance(obj)
     local char = game:GetService("Players").LocalPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         return (char.HumanoidRootPart.Position - obj.Position).Magnitude
@@ -156,26 +170,26 @@ function UniversalESP:_getDistance(obj)
     return math.huge
 end
 
-function UniversalESP:_createESP(obj)
-    if not obj or obj:FindFirstChild("UniversalESP_Marker") then return end
+function AdvancedESP:_createESP(obj)
+    if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return end
 
     local marker = Instance.new("BoolValue")
-    marker.Name = "UniversalESP_Marker"
+    marker.Name = "AdvancedESP_Marker"
     marker.Parent = obj
 
     local highlight = Instance.new("Highlight")
-    highlight.Name = "UniversalESP_Highlight"
+    highlight.Name = "AdvancedESP_Highlight"
     highlight.Adornee = obj
     highlight.FillTransparency = 0.6
-    highlight.OutlineTransparency = 0
+    highlight.OutlineTransparency = 0.3
     highlight.FillColor = self.Config.HighlightColor
-    highlight.OutlineColor = Color3.fromRGB(255,255,255)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
     highlight.Parent = obj
 
     local billboard = Instance.new("BillboardGui")
-    billboard.Name = "UniversalESP_Billboard"
+    billboard.Name = "AdvancedESP_Billboard"
     billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
     billboard.AlwaysOnTop = true
     billboard.Adornee = obj
     billboard.Parent = obj
@@ -188,9 +202,8 @@ function UniversalESP:_createESP(obj)
     label.TextColor3 = self.Config.LabelColor
     label.BackgroundTransparency = 1
     label.TextStrokeTransparency = 0
-    label.TextStrokeColor3 = Color3.fromRGB(0,0,0)
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     label.Parent = billboard
-
     table.insert(self.Instances, {
         Object = obj,
         Marker = marker,
@@ -198,7 +211,6 @@ function UniversalESP:_createESP(obj)
         Billboard = billboard,
         Label = label
     })
-
     if self.Config.ShowDistance then
         table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
             self:_safeCall(function()
@@ -206,42 +218,69 @@ function UniversalESP:_createESP(obj)
                 if dist <= self.Config.MaxDistance then
                     label.Text = string.format("%s\n[%dm]", obj.Name, math.floor(dist))
                     billboard.Enabled = true
+                    highlight.Enabled = true
                 else
                     billboard.Enabled = false
+                    highlight.Enabled = false
                 end
             end)
         end))
     end
 end
 
-function UniversalESP:_isTarget(obj)
+function AdvancedESP:_isTarget(obj)
     if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
     
-    for _, name in ipairs(self.TargetNames) do
-        if self.Config.ExactMatch then
-            if obj.Name == name then return true end
-        else
-            if string.find(obj.Name, name) then return true end
+    if self.Config.SearchPath ~= "Workspace" then
+        local targetPath = self:_getFromPath(self.Config.SearchPath)
+        if not targetPath or not obj:IsDescendantOf(targetPath) then
+            return false
         end
     end
-    return false
+    
+    local nameMatch = false
+    for _, name in ipairs(self.TargetNames) do
+        if self.Config.ExactMatch then
+            if obj.Name == name then nameMatch = true break end
+        else
+            if string.find(obj.Name, name) then nameMatch = true break end
+        end
+    end
+    if nameMatch and self.Config.CheckMarker then
+        return obj:FindFirstChild(self.Config.MarkerName) ~= nil
+    end
+    
+    return nameMatch
 end
 
-function UniversalESP:_scanAndAdd(parent)
-    self:_safeCall(function()
-        for _, obj in ipairs(parent:GetDescendants()) do
+function AdvancedESP:_scanAndAdd()
+    local startTime = os.clock()
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    
+    local function scan(parent)
+        for _, obj in ipairs(parent:GetChildren()) do
+            if os.clock() - startTime > 0.05 then
+                task.wait()
+                startTime = os.clock()
+            end
             if self:_isTarget(obj) then
                 self:_createESP(obj)
             end
+            if self.Config.ScanRecursive then
+                scan(obj)
+            end
         end
-    end)
+    end
+    
+    self:_safeCall(scan, targetPath)
 end
 
-function UniversalESP:Start()
+function AdvancedESP:Start()
     if self.Active then return end
     self.Active = true
-    self:_scanAndAdd(game:GetService("Workspace"))
-    table.insert(self.Connections, game:GetService("Workspace").DescendantAdded:Connect(function(obj)
+    self:_scanAndAdd()
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
         if self:_isTarget(obj) then
             task.wait(self.Config.LoadWaitTime)
             self:_createESP(obj)
@@ -249,13 +288,13 @@ function UniversalESP:Start()
     end))
     table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
         if os.clock() - (self._lastUpdate or 0) > self.Config.UpdateInterval then
-            self:_scanAndAdd(game:GetService("Workspace"))
+            self:_scanAndAdd()
             self._lastUpdate = os.clock()
         end
     end))
 end
 
-function UniversalESP:Stop()
+function AdvancedESP:Stop()
     if not self.Active then return end
     self.Active = false
     for _, conn in ipairs(self.Connections) do
@@ -272,86 +311,79 @@ function UniversalESP:Stop()
     self.Instances = {}
 end
 
-function UniversalESP:SetConfig(config)
+function AdvancedESP:SetConfig(config)
     for k, v in pairs(config) do
         if self.Config[k] ~= nil then
-            self.Config[k] = v
+            if k == "SearchPath" and v ~= self.Config.SearchPath then
+                if self:_getFromPath(v) then
+                    self.Config[k] = v
+                    if self.Active then
+                        self:Stop()
+                        self:Start()
+                    end
+                else
+                    warn("路径无效:", v)
+                end
+            else
+                self.Config[k] = v
+            end
         end
     end
     return self
 end
+
+--local ConfigurationSection = ESPTab:CreateSection("全局配置")
 --[[
     "workspace.GameplayFolder.Rooms.LeftStraight1["6BigDrawers"].SpawnLocations:GetChildren()[3]["Currency5-1"]",
     "workspace.GameplayFolder.Rooms.LeftStraight1:GetChildren()[13].SpawnLocations:GetChildren()[8]["Currency25-4"]",
     "workspace.GameplayFolder.Rooms.LeftStraight1:GetChildren()[13].SpawnLocations:GetChildren()[3]["Currency10-4"]"
 ]]--
-local LockerESP = UniversalESP.new({"Locker", "柜子"})
-local DoorESP = UniversalESP.new({"Door","门"})
-local Money5ESP = UniversalESP.new({"Currency5","钱5"})
-local Money25ESP = UniversalESP.new({"Currency25","钱25"})
-local Money10ESP = UniversalESP.new({"Currecy10","钱10"})
+
+local LockerESP = AdvancedESP.new({"Locker", "柜子"})
+local DoorsESP = AdvancedESP.new({"Door","门"})
+local MoneyESP = AdvancedESP.new({"Currency","钱"})
 
 LockerESP:SetConfig({
     HighlightColor = Color3.fromRGB(0, 200, 255),
     LabelSize = 10,
-    MaxDistance = 500
+    MaxDistance = 250
 })
 
-DoorESP:SetConfig({
-    HighlightColor = Color3.fromRGB(144,238,144)
-})
-
-Money5ESP:SetConfig({
-    HighlightColor = Color3.fromRGB(230,190,138),
-    LabelSize = 8,
-    MaxDistance = 200,
+DoorsESP:SetConfig({
+    HighlightColor = Color3.fromRGB(144,238,144),
+    LobelSize = 8,
+    MaxDistance = 300,
     ShowDistance = false,
+    SearchPath = "game.Workspace.GameplayFolder.Rooms",
+    ScanRecursive = true
+})
+
+MoneyESP:SetConfig({
+    HighlightColor = Color3.fromRGB(212,175,55),
+    LobelSize = 7,
+    MaxDistance = 200,
     ExactMatch = false
 })
 
-Money25ESP:SetConfig({
-    HighlightColor = Color3.fromRGB(230,190,138),
-    LabelSize = 8,
-    MaxDistance = 200,
-    ShowDistance = false,
-    ExactMatch = false
-})
-
-Money10ESP:SetConfig({
-    HighlightColor = Color3.fromRGB(230,190,138),
-    LabelSize = 8,
-    MaxDistance = 200,
-    ShowDistance = false,
-    ExactMatch = false
-})
-
-local MainTab = Window:CreateTab("ESP", nil)
+local MainTab = Window,CreateTab("ESP",nil)
 
 local Toggle = MainTab:CreateToggle({
-    Name = "柜子透视",
-    Callback = function(Value) 
-        if Value then LockerESP:Start() else LockerESP:Stop() end 
+    Name = "柜子透视(Locker)",
+    Callback = function(Value)
+        if Value then LockerESP:Start() else LockerESP:Stop() end
     end,
 })
 
 local Toggle = MainTab:CreateToggle({
-    Name = "门透视",
+    Name = "门透视(Door)",
     Callback = function(Value)
-        if Value then DoorESP:Start() else DoorESP:Stop() end
+        if Value then DoorsESP:Start() else DoorsESP:Stop() end
     end,
 })
 
 local Toggle = MainTab:CreateToggle({
-    Name = "钱透视",
+    Name = "钱透视(Currency)",
     Callback = function(Value)
-        if Value then
-            Money5ESP:Start()
-            Money10ESP:Start()
-            Money25ESP:Start()
-        else
-            Money5ESP:Stop()
-            Money10ESP:Stop()
-            Money25ESP:Stop()
-        end
+        if Value then MoneyESP:Start() else MoneyESP:Stop() end
     end,
 })
