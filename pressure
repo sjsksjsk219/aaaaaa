@@ -351,7 +351,7 @@ LockerESP:SetConfig({
 
 DoorsESP:SetConfig({
     HighlightColor = Color3.fromRGB(144,238,144),
-    LobelSize = 8,
+    LabelSize = 8,
     MaxDistance = 300,
     ShowDistance = false,
     SearchPath = "game.Workspace.GameplayFolder.Rooms",
@@ -360,28 +360,28 @@ DoorsESP:SetConfig({
 
 MoneyESP:SetConfig({
     HighlightColor = Color3.fromRGB(212,175,55),
-    LobelSize = 7,
+    LabelSize = 7,
     MaxDistance = 200,
     ExactMatch = false
 })
 
-local MainTab = Window,CreateTab("ESP",nil)
+local ESPTab = Window:CreateTab("ESP",nil)
 
-local Toggle = MainTab:CreateToggle({
+local Toggle = ESPTab:CreateToggle({
     Name = "柜子透视(Locker)",
     Callback = function(Value)
         if Value then LockerESP:Start() else LockerESP:Stop() end
     end,
 })
 
-local Toggle = MainTab:CreateToggle({
+local Toggle = ESPTab:CreateToggle({
     Name = "门透视(Door)",
     Callback = function(Value)
         if Value then DoorsESP:Start() else DoorsESP:Stop() end
     end,
 })
 
-local Toggle = MainTab:CreateToggle({
+local Toggle = ESPTab:CreateToggle({
     Name = "钱透视(Currency)",
     Callback = function(Value)
         if Value then MoneyESP:Start() else MoneyESP:Stop() end
