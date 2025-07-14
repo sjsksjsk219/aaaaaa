@@ -287,9 +287,9 @@ end
 ]]--
 local LockerESP = UniversalESP.new({"Locker", "柜子"})
 local DoorESP = UniversalESP.new({"Door","门"})
-local Money5ESP = UniversalESP.new({"Money","钱5"})
-local Money25ESP = UniversalESP.new({"Money","钱25"})
-local Money10ESP = UniversalESP.new({"Money","钱10"})
+local Money5ESP = UniversalESP.new({"Currency5","钱5"})
+local Money25ESP = UniversalESP.new({"Currency25","钱25"})
+local Money10ESP = UniversalESP.new({"Currecy10","钱10"})
 
 LockerESP:SetConfig({
     HighlightColor = Color3.fromRGB(0, 200, 255),
@@ -305,21 +305,24 @@ Money5ESP:SetConfig({
     HighlightColor = Color3.fromRGB(230,190,138),
     LabelSize = 8,
     MaxDistance = 200,
-    ShowDistance = false
+    ShowDistance = false,
+    ExactMatch = false
 })
 
 Money25ESP:SetConfig({
     HighlightColor = Color3.fromRGB(230,190,138),
     LabelSize = 8,
     MaxDistance = 200,
-    ShowDistance = false
+    ShowDistance = false,
+    ExactMatch = false
 })
 
 Money10ESP:SetConfig({
     HighlightColor = Color3.fromRGB(230,190,138),
     LabelSize = 8,
     MaxDistance = 200,
-    ShowDistance = false
+    ShowDistance = false,
+    ExactMatch = false
 })
 
 local MainTab = Window:CreateTab("ESP", nil)
