@@ -8,8 +8,9 @@ game.Players.PlayerAdded:Connect(function(player)
         Name = player.." 加入了游戏",
         Content = "当前玩家:"..tostring(#players),
         Duration = 2,
-        Image = nil
-    }))
+        Image = nil -- 路径
+    })
+end)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -129,6 +130,27 @@ local Toggle = Tab:CreateToggle({
     end,
 })
 
+local button = Tab:CreateButton({
+    Name = "Dex",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/main/dex.lua'))()
+    end,
+})
+
+local button = Tab:CreateButton({
+    Name = "Spy",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))()
+    end,
+})
+
+local button = Tab:CreateButton({
+    Name = "IY",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+    end,
+})
+
 local FunnyTab = Window:CreateTab("娱乐",nil)
 
 local Button = FunnyTab:CreateButton({
@@ -138,6 +160,13 @@ local Button = FunnyTab:CreateButton({
             game:GetService("ReplicatedStorage").Remotes.Server.PurchaseTurret:FireServer()
             task.wait()
         end
+    end,
+})
+
+local Button = FunnyTab:CreateButton({
+    Name  = "删除自己所有的车(客户端)",
+    Callback = function()
+        print(1) -- 路径
     end,
 })
 
