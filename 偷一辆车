@@ -1,0 +1,136 @@
+repeat wait() until game:IsLoaded()
+if game.GmaeId == 7799183193 then
+--懒得缩进了,Lua对缩进没要求
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))
+local Window = Rayfield:CreateWindow({
+    Name = "XB脚本",
+    LoadingTitle = "XB脚本",
+    LoadingSubtitle = "by sjsksjsk",
+    ConfigurationSaving = {
+        Enabled = false,
+        FolderName = nil,
+        FileName = "脚本"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "discord.gg/Mspaint",
+        RememberJoins = true
+    },
+    KeySystem = false
+})
+
+local MainTab = Window:CreateTab("主要",nil)
+
+local Input = MainTab:CreateInput({
+    Name = "刷钱等待时间",
+    RemoveTextAfterFocusLost = true,
+    PlaceholderText = "请输入",
+    Callback = function(Text)
+        _G.WaitTime = (Text)
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "自动刷钱",
+    Callback = function(Value)
+        if Value then
+            if WaitTime then
+                while true do
+                    for num = 1, 40 do
+                        local collect = "Earnings"..tostring(num)
+                        game:GetService("ReplicatedStorage").Remotes.Server.CollectEarnings:FireServer(collect)
+                        task.wait(WaitTime)
+                    end
+                end
+            else
+                Rayfield:Notify({
+                    Title = "请先设置等待时间!",
+                    Duration = 5,
+                })
+            end
+        end
+    end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "基地永久防御",
+    Callback = function(Value)
+        if Value then
+            while true do
+                game:GetService("ReplicatedStorage").Remotes.Server.LockGate:FireServer()
+            end
+        end
+    end,
+})
+
+local Button = MainTab:CreateButton({
+    Name = "基地召唤炮塔",
+    Callback = function()
+        game:GetService("ReplicatedStorage").Remotes.Server.PurchaseTurret:FireServer()
+    end,
+})
+
+--我直接用的我之前写的模版
+
+local Tab = Window:CreateTab("基础功能",nil)
+
+Rayfield:Notify({
+    Title = "欢迎使用本脚本",
+    Content = "开的时候演都不要演",
+    Duration = 2,
+    Image = nil,
+    Actions = {
+        Ignore = {
+            Name = "好的",
+            Callback = function()
+                print("SB")
+            end
+        },
+    },
+})
+
+local Input = Tab:CreateInput({
+    Name = "速度调节",
+    PlaceholderText = "请输入速度",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = tonumber(Text) or 16
+    end,
+})
+
+local Toggle = Tab:CreateToggle({
+    Name = "穿墙",
+    CurrentValue = false,
+    Flag = "无",
+    Callback = function(Value)
+        if Value then
+            _G.NoclipConnection = game:GetService("RunService").Stepped:Connect(function()
+                for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end)
+        else
+            _G.NoclipConnection = game:GetService("RunService").Stepped:Connect(function()
+                for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end)
+        end
+    end,
+})
+
+local FunnyTab = Window:CreateTab("娱乐",nil)
+
+local Button = FunnyTab:CreateButton({
+    Name = "自动扣钱",
+    Callback = function(Value)
+        if Value then
+            game:GetService("ReplicatedStorage").Remotes.Server.PurchaseTurret:FireServer()
+        end
+    end,
+})
+
+end
