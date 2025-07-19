@@ -104,7 +104,12 @@ local Input = Tab:CreateInput({
     PlaceholderText = "请输入速度",
     RemoveTextAfterFocusLost = false,
     Callback = function(Text)
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = tonumber(Text) or 16
+        local humanoid = game.Players.LocalPlayer.Character.Humanoid
+        local targetSpeed = (Text)
+        for i = humanoid.WalkSpeed, targetSpeed, 5 do
+            humanoid.WalkSpeed = i
+             task.wait(0.1)
+        end
     end,
 })
 
