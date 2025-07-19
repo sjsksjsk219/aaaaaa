@@ -1,6 +1,5 @@
 repeat wait() until game:IsLoaded()
-if game.GmaeId == 7799183193 then
---懒得缩进了,Lua对缩进没要求
+if game.GameId == 7799183193 then
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))
 local Window = Rayfield:CreateWindow({
     Name = "XB脚本",
@@ -26,19 +25,20 @@ local Input = MainTab:CreateInput({
     RemoveTextAfterFocusLost = true,
     PlaceholderText = "请输入",
     Callback = function(Text)
-        _G.WaitTime = (Text)
+        _G.WaitTime = Text
+    end
 })
 
 local Toggle = MainTab:CreateToggle({
     Name = "自动刷钱",
     Callback = function(Value)
         if Value then
-            if WaitTime then
-                while true do
+            if _G.WaitTime then
+                while Value do
                     for num = 1, 40 do
                         local collect = "Earnings"..tostring(num)
                         game:GetService("ReplicatedStorage").Remotes.Server.CollectEarnings:FireServer(collect)
-                        task.wait(WaitTime)
+                        task.wait(_G.WaitTime)
                     end
                 end
             else
@@ -54,10 +54,9 @@ local Toggle = MainTab:CreateToggle({
 local Toggle = MainTab:CreateToggle({
     Name = "基地永久防御",
     Callback = function(Value)
-        if Value then
-            while true do
-                game:GetService("ReplicatedStorage").Remotes.Server.LockGate:FireServer()
-            end
+        while Value do
+            game:GetService("ReplicatedStorage").Remotes.Server.LockGate:FireServer()
+            task.wait(30)
         end
     end,
 })
@@ -68,8 +67,6 @@ local Button = MainTab:CreateButton({
         game:GetService("ReplicatedStorage").Remotes.Server.PurchaseTurret:FireServer()
     end,
 })
-
---我直接用的我之前写的模版
 
 local Tab = Window:CreateTab("基础功能",nil)
 
@@ -111,13 +108,9 @@ local Toggle = Tab:CreateToggle({
                 end
             end)
         else
-            _G.NoclipConnection = game:GetService("RunService").Stepped:Connect(function()
-                for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = true
-                    end
-                end
-            end)
+            if _G.NoclipConnection then
+                _G.NoclipConnection:Disconnect()
+            end
         end
     end,
 })
@@ -126,10 +119,8 @@ local FunnyTab = Window:CreateTab("娱乐",nil)
 
 local Button = FunnyTab:CreateButton({
     Name = "自动扣钱",
-    Callback = function(Value)
-        if Value then
-            game:GetService("ReplicatedStorage").Remotes.Server.PurchaseTurret:FireServer()
-        end
+    Callback = function()
+        game:GetService("ReplicatedStorage").Remotes.Server.PurchaseTurret:FireServer()
     end,
 })
 
