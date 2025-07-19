@@ -29,7 +29,7 @@ local Input = MainTab:CreateInput({
     PlaceholderText = "请输入",
     Callback = function(Text)
         _G.WaitTime = Text
-    end
+    end,
 })
 
 local Toggle = MainTab:CreateToggle({
