@@ -2,6 +2,15 @@ repeat wait() until game:IsLoaded()
 
 if game.PlaceId == 95702387256198 then
 
+game.Players.PlayerAdded:Connect(function(player)
+    local players = game.Workspace.Players
+    Rayfield:Notify({
+        Name = player.." 加入了游戏",
+        Content = "当前玩家:"..tostring(#players),
+        Duration = 2,
+        Image = nil
+    }))
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -25,7 +34,7 @@ local MainTab = Window:CreateTab("主要",nil)
 
 local Input = MainTab:CreateInput({
     Name = "刷钱等待时间",
-    RemoveTextAfterFocusLost = true,
+    RemoveTextAfterFocusLost = false,
     PlaceholderText = "请输入",
     Callback = function(Text)
         _G.WaitTime = Text
@@ -47,7 +56,7 @@ local Toggle = MainTab:CreateToggle({
             else
                 Rayfield:Notify({
                     Title = "请先设置等待时间!",
-                    Duration = 5,
+                    Duration = 5
                 })
             end
         end
@@ -57,9 +66,11 @@ local Toggle = MainTab:CreateToggle({
 local Toggle = MainTab:CreateToggle({
     Name = "基地永久防御",
     Callback = function(Value)
-        while Value do
-            game:GetService("ReplicatedStorage").Remotes.Server.LockGate:FireServer()
-            task.wait()
+        if Value then
+            while true do
+                game:GetService("ReplicatedStorage").Remotes.Server.LockGate:FireServer()
+                task.wait(30) --减轻服务器负担
+            end
         end
     end,
 })
@@ -123,7 +134,10 @@ local FunnyTab = Window:CreateTab("娱乐",nil)
 local Button = FunnyTab:CreateButton({
     Name = "自动扣钱",
     Callback = function()
-        game:GetService("ReplicatedStorage").Remotes.Server.PurchaseTurret:FireServer()
+        while true do
+            game:GetService("ReplicatedStorage").Remotes.Server.PurchaseTurret:FireServer()
+            task.wait()
+        end
     end,
 })
 
