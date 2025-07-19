@@ -170,7 +170,7 @@ local Button = FunnyTab:CreateButton({
 local Button = FunnyTab:CreateButton({
     Name  = "删除自己所有的车(客户端)",
     Callback = function()
-        local car = Workspace.Temp.Players.LocalPlayer.OwnedCars
+        local car = Workspace.Temp.Players.LocalPlayer.FindFirstChild("OwnedCars")
         car:Destroy()
     end,
 })
