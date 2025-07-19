@@ -2,15 +2,17 @@ repeat wait() until game:IsLoaded()
 
 if game.PlaceId == 95702387256198 then
 
-game.Players.PlayerAdded:Connect(function(player)
-    local players = game.Workspace.Players
-    Rayfield:Notify({
-        Name = player.." 加入了游戏",
-        Content = "当前玩家:"..tostring(#players),
-        Duration = 2,
-        Image = nil -- 路径
-    })
-end)
+while true do
+    game.Players.PlayerAdded:Connect(function(player)
+        local players = game.Workspace.Players
+        Rayfield:Notify({
+            Name = player.." 加入了游戏",
+            Content = "当前玩家:"..tostring(#players),
+            Duration = 2,
+            Image = workspace.Players.LocalPlayer:GetChildren()[14] -- 路径
+        })
+    end)
+end
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -70,7 +72,7 @@ local Toggle = MainTab:CreateToggle({
         if Value then
             while true do
                 game:GetService("ReplicatedStorage").Remotes.Server.LockGate:FireServer()
-                task.wait(30) --减轻服务器负担
+                task.wait() --减轻服务器负担
             end
         end
     end,
@@ -166,7 +168,8 @@ local Button = FunnyTab:CreateButton({
 local Button = FunnyTab:CreateButton({
     Name  = "删除自己所有的车(客户端)",
     Callback = function()
-        print(1) -- 路径
+        local car = workspace.Temp.Players.LocalPlayer.OwnedCars
+        car:Destroy()
     end,
 })
 
