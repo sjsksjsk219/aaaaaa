@@ -11,6 +11,7 @@ while true do
             Duration = 2,
             Image = workspace.Players.LocalPlayer:GetChildren()[14] -- 路径
         })
+        task.wait()
     end)
 end
 
