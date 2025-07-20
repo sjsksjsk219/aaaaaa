@@ -6,8 +6,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local blacklist = {
         ["lused28"] = true,
-        ["完斗舌寿"] = true,
-        ["player5918460"] = true
+        ["完斗舌寿"] = true
     }
 
 function isBlacklisted(name)
