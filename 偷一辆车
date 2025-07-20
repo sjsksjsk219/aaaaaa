@@ -1,4 +1,4 @@
-_repeat task.wait() until game:IsLoaded()
+repeat task.wait() until game:IsLoaded()
 
 if game.PlaceId == 95702387256198 then
 
@@ -200,7 +200,7 @@ local Button = FunnyTab:CreateButton({
     end,
 })
 
-local Button = FunnyTab:CreateButton(
+local Button = FunnyTab:CreateButton({
     Name  = "删除自己所有的车(客户端)",
     Callback = function()  
         local player = game.Players.LocalPlayer
