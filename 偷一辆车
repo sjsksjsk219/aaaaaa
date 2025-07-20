@@ -4,6 +4,24 @@ if game.PlaceId == 95702387256198 then
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
+local blacklist = ["lused28","完斗舌寿","player5918460"]
+
+function isBlacklist(name)
+    return blacklist[name] == true
+end
+
+while true do
+    local playerName = game.Player.LocalPlayer.Name
+    if isBlacklist[playerName] then
+        Rayfield:Notify({
+            Name = "XB脚本",
+            Content = "您已被加入黑名单",
+            Duration = 5
+        })
+        exit()
+    end
+end
+
 game.Players.PlayerAdded:Connect(function(player)
     Rayfield:Notify({
         Name = player .. " 加入了游戏",
