@@ -1,16 +1,15 @@
-repeat wait() until game:IsLoaded()
+_repeat task.wait() until game:IsLoaded()
 
 if game.PlaceId == 95702387256198 then
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 game.Players.PlayerAdded:Connect(function(player)
-    local players = game.Workspace.Players
     Rayfield:Notify({
-        Name = player.." 加入了游戏",
-        Content = "当前玩家:"..tostring(#players),
+        Name = player.Name .. " 加入了游戏",
+        Content = "当前玩家: " .. #game.Players:GetPlayers(),
         Duration = 2,
-        Image = game.Players.LocalPlayer:GetChildren()[14] -- 路径
+        Image = player.Character and player.Character:FindFirstChild("Head") or nil
     })
 end)
 
@@ -38,7 +37,7 @@ local Input = MainTab:CreateInput({
     RemoveTextAfterFocusLost = false,
     PlaceholderText = "请输入",
     Callback = function(Text)
-        _G.WaitTime = Text
+        _G.WaitTime = tonumber(Text) or 0
     end,
 })
 
@@ -80,6 +79,40 @@ local Button = MainTab:CreateButton({
     Callback = function()
         game:GetService("ReplicatedStorage").Remotes.Server.PurchaseTurret:FireServer()
     end,
+})
+
+-- workspace.Plots["2"].Turret 
+
+local Toggle = MainTab:CreateToggle({
+    Name = "删除所有车库屏障",
+    Callback = function(Value)
+        while Value do
+            local plots = game.Workspace.Plots
+            for _, part in ipairs(plots:GetChildren()) do
+                local barrier = part:FindFirstChild("Barrier")
+                if barrier then
+                    barrier:Destroy()
+                end
+            end
+            task.wait()
+        end       
+    end,                   
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "删除所有车库炮塔",
+    Callback = function(Value)
+        while true do
+            local plots = game.Workspace.Plots
+            for _, part in ipairs(plots:GetChildren()) do
+                local turrent = part:FindFirstChild("Turret")
+                if turrent then
+                    turrent:Destroy()
+                end
+            end
+            task.wait()
+        end
+    end,                   
 })
 
 local Tab = Window:CreateTab("基础功能",nil)
@@ -167,11 +200,14 @@ local Button = FunnyTab:CreateButton({
     end,
 })
 
-local Button = FunnyTab:CreateButton({
+local Button = FunnyTab:CreateButton(
     Name  = "删除自己所有的车(客户端)",
-    Callback = function()
-        local car = Workspace.Temp.Players.LocalPlayer.FindFirstChild("OwnedCars")
-        car:Destroy()
+    Callback = function()  
+        local player = game.Players.LocalPlayer
+        local car = workspace.Temp:FindFirstChild(player.Name) and workspace.Temp[player.Name]:FindFirstChild("OwnedCars")
+        if car then
+           car:Destroy()
+        end
     end,
 })
 
