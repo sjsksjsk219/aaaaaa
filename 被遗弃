@@ -246,8 +246,10 @@ local MainESP = AdvancedESP.new({"Main","发电机"})
 MainESP:SetConfig({
     SearchPath = "Workspac.Map.Ingame.Map",
     ScanRecursive = true,
-    MaxDistance = 500,
-    HighlightColor = Color3.fromRGB(0,200,255)
+    MaxDistance = 100000,
+    HighlightColor = Color3.fromRGB(0,200,255),
+    CheckMarker = true,
+    MarkerName = "Prompt"
 })
 
 local ESPTab = Window:CreateTab("ESP",nil)
@@ -256,5 +258,28 @@ local Toggle = ESPTab:CreateToggle({
     Name = "发电机透视",
     Callback = function(Value)
         if Value then MainESP:Start() else MainESP:Stop() end
+    end,
+})
+
+local OtherTab = Window:CreateTab("其他",nil)
+
+local Button = OtherTab:CreateButton({
+    Name = "Dex",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/main/dex.lua'))()
+    end,
+})
+
+local Button = OtherTab:CreateButton({
+    Name = "Spy",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))()
+    end,
+})
+
+local Button = OtherTab:CreateButton({
+    Name = "IY",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
     end,
 })
