@@ -142,14 +142,29 @@ local Toggle = MainTab:CreateToggle({
     Callback = function(Value)
         if Value then
             if _G.WaitTime then
-                while Value do
-                    workspace.Map.Ingame.Map.Generator.Remotes.RE:FireServer()
-                    task.wait(_G.WaitTime)
-                end
+                local thread
+                thread = task.spawn(function()
+                    while Value do
+                        workspace.Map.Ingame.Map.Generator.Remotes.RE:FireServer()
+                        task.wait(_G.WaitTime)
+                    end
+                end)
+                
+                task.spawn(function()
+                    while Value do task.wait() end
+                    if thread then task.cancel(thread) end
+                end)
             end
             Rayfield:Notify({
                 Title = "自动修电机",
                 Content = "靠近电机自动维修!",
+                Image = nil
+            })
+        else
+            Rayfield:Notify({
+                Title = "自动修电机",
+                Content = "已关闭自动修电机!",
+                Duration = 2,
                 Image = nil
             })
         end
@@ -205,6 +220,7 @@ local Toggle = MainTab:CreateToggle({
             
             local player = game.Players.LocalPlayer
             local staminaThread
+            local originalSpeed = nil
             
             local function findAndModifyStamina()
                 while Value do
@@ -212,10 +228,19 @@ local Toggle = MainTab:CreateToggle({
                         if survivor:FindFirstChild("SpeedMultipliers") then
                             local speedMultipliers = survivor.SpeedMultipliers
                             if speedMultipliers:FindFirstChild("Sprinting") then
+                                if originalSpeed == nil then
+                                    originalSpeed = speedMultipliers.Sprinting.Value
+                                end
                                 speedMultipliers.Sprinting.Value = 3
                                 Rayfield:Notify({
                                     Title = "无限体力",
-                                    Content = "已找到!" .. survivor .. "",
+                                    Content = "定位成功!正在修改速度...",
+                                    Duration = 2,
+                                    Image = nil
+                                })
+                                Rayfield:Notify({
+                                    Title = "无限体力",
+                                    Content = "修改成功!",
                                     Duration = 2,
                                     Image = nil
                                 })
@@ -233,6 +258,16 @@ local Toggle = MainTab:CreateToggle({
                 while Value do task.wait() end
                 if staminaThread then
                     task.cancel(staminaThread)
+                end
+                if originalSpeed then
+                    for _, survivor in pairs(workspace.Players.Survivors:GetChildren()) do
+                        if survivor:FindFirstChild("SpeedMultipliers") then
+                            local speedMultipliers = survivor.SpeedMultipliers
+                            if speedMultipliers:FindFirstChild("Sprinting") then
+                                speedMultipliers.Sprinting.Value = originalSpeed
+                            end
+                        end
+                    end
                 end
                 Rayfield:Notify({
                     Title = "无限体力",
@@ -785,7 +820,7 @@ end
 local MainESP = AdvancedESP.new({"Main","Generator"})
 
 MainESP:SetConfig({
-    SearchPath = "Workspac.Map.Ingame.Map",
+    SearchPath = "Workspace.Map.Ingame.Map",
     ScanRecursive = true,
     MaxDistance = 100000,
     HighlightColor = Color3.fromRGB(0,200,255),
@@ -797,8 +832,8 @@ MainESP:SetConfig({
         Generator = "发电机(可维修)"
     },
     ObjectColors = {
-        Main = fromRGB(0,200,255),
-        Generator = fromRGB(255,200,100)
+        Main = Color3.fromRGB(0,200,255),
+        Generator = Color3.fromRGB(255,200,100)
     }
 })
 
