@@ -1,7 +1,3 @@
-repeat
-    task.wait()
-until game:IsLoaded()
-
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -35,7 +31,7 @@ Rayfield:Notify({
     Title = "欢迎使用本脚本",
     Content = "开的时候演都不要演",
     Duration = 2,
-    Image = nil,
+    Image = ☠️,
     Actions = {
         Ignore = {
             Name = "好的",
@@ -53,22 +49,22 @@ local Toggle = MainTab:CreateToggle({
     Name = "防挂机被踢",
     Callback = function(Value)
         if Value then
-            while Value do
-                game:GetService("Players").LocalPlayer.PlayerData.Settings.Game.AFK.Value = false
-                task.wait()
-            end
             Rayfield:Notify({
                 Title = "防挂机被踢",
                 Content = "已开启防挂机!",
                 Duration = 2,
-                Image = nil
+                Image = 😃
             })
+            while Value do
+                game:GetService("Players").LocalPlayer.PlayerData.Settings.Game.AFK.Value = false
+                task.wait()
+            end
         else
             Rayfield:Notify({
                 Title = "防挂机被踢",
                 Content = "已关闭防挂机!",
                 Duration = 2,
-                Image = nil
+                Image = 😱
             })
         end
     end,
@@ -83,7 +79,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "Debug",
                 Content = "已开启Debug模式!",
                 Duration = 2,
-                Image = nil
+                Image = 😈
             })
         else
             game:GetService("Players").LocalPlayer.PlayerData.Settings.Advanced.DebugMode.Value = false
@@ -91,7 +87,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "Debug",
                 Content = "已关闭Debug模式!",
                 Duration = 2,
-                Image = nil
+                Image = 👿
             })
         end
     end,
@@ -116,19 +112,26 @@ Rayfield:Notify({
 
 --]]
 
+--[[
+--制作中...
+local Input = MainTab:CreateInput({
+    Name = ""
+})
+--]]
+
 local Input = MainTab:CreateInput({
     Name = "修机延迟",
     PlaceholderText = "请输入",
     RemoveTextAfterFocusLost = false,
     Callback = function(Value)
         if Value then
-           _G.WaitTime = (Value)
+           _G.WaitTime = tonumber(Value)
         else
             Rayfield:Notify({
                 Title = "修机",
                 Content = "请输入延迟!",
                 Duration = 2,
-                Image = nil
+                Image = 😡
             })
         end
     end,
@@ -146,12 +149,206 @@ local Toggle = MainTab:CreateToggle({
             end
             Rayfield:Notify({
                 Title = "自动修电机",
-                Content = "靠近电机自动维修!"
+                Content = "靠近电机自动维修!",
+                Image = 😎
             })
         end
     end,
 })
 
+--[[
+local Toggle = MainTab:CreateToggle({
+    Name = "无限体力",
+    Callback = function(Value)
+        if Value then
+            Rayfield:Notify({
+                Title = "无限体力",
+                Content = "无限体力已开启!",
+                Duration = 2,
+                Image = nil
+            })
+            
+            --workspace.Players.Survivors.Noob.SpeedMultipliers.Sprinting
+            
+            local Survivors = game.Workspace.Players.Survivors
+            for _, Player in pairs(Survivors:GetChildren()) do
+                if Player.SpeedMultipliers.Sprinting then  --检测是否为自己,只有自己的才会有Sprinting,修改不了别人的
+                    while Value do
+                        Player.SpeedMultipliers.Sprinting.Value = 3
+                        task.wait()
+                    end
+                end
+            end
+        else
+            Rayfield:Notify({
+                Title = "无限体力",
+                Content = "无限体力已关闭!",
+                Duration = 2,
+                Image = nil
+            })
+        end
+    end,               
+})
+
+--]]
+
+local Toggle = MainTab:CreateToggle({
+    Name = "无限体力",
+    Callback = function(Value)
+        if Value then
+            Rayfield:Notify({
+                Title = "无限体力",
+                Content = "正在定位你的角色...",
+                Duration = 2,
+                Image = 🤨
+            })
+            
+            local player = game.Players.LocalPlayer
+            local staminaThread
+            
+            local function findAndModifyStamina()
+                while Value do
+                    for _, survivor in pairs(workspace.Players.Survivors:GetChildren()) do
+                        if survivor:FindFirstChild("SpeedMultipliers") then
+                            local speedMultipliers = survivor.SpeedMultipliers
+                            if speedMultipliers:FindFirstChild("Sprinting") then
+                                speedMultipliers.Sprinting.Value = 3
+                                Rayfield:Notify({
+                                    Title = "无限体力",
+                                    Content = "已找到!" .. survivor,
+                                    Duration = 2,
+                                    Image = 😏
+                                })
+                                break
+                            end
+                        end
+                    end
+                    task.wait(0.5)
+                end
+            end
+            
+            staminaThread = task.spawn(findAndModifyStamina)
+            
+            task.spawn(function()
+                while Value do task.wait() end
+                if staminaThread then
+                    task.cancel(staminaThread)
+                end
+                Rayfield:Notify({
+                    Title = "无限体力",
+                    Content = "已关闭",
+                    Duration = 1
+                })
+            end)
+        end
+    end
+})
+
+--[[
+local AdvancedESP = {}
+AdvancedESP.__index = AdvancedESP
+
+local DEFAULT_CONFIG = {
+    UpdateInterval = 1,              
+    LoadWaitTime = 0.2,             
+    HighlightColor = Color3.fromRGB(0, 255, 0),
+    LabelColor = Color3.fromRGB(255, 255, 255),
+    LabelSize = 14,                 
+    ShowDistance = true,
+    MaxDistance = 500,
+    ExactMatch = false,             
+    CheckMarker = true,
+    MarkerName = "Prompt",
+    SearchPath = "Workspace",
+    ScanRecursive = true,
+    DisplayNames = {                -- 自定义显示名称
+        Main = "发电机",
+        Generator = "发电机(可修理)",
+        Killer = "杀手位置",
+        ExitGate = "出口大门"
+    },
+    ObjectIcons = {                 -- 对象图标
+        Main = "⚡",
+        Killer = "🔪"
+    }
+}
+
+function AdvancedESP:_createESP(obj)
+    if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return end
+
+    local displayName = self.Config.DisplayNames[obj.Name] or obj.Name
+    local icon = self.Config.ObjectIcons[obj.Name] or ""
+   
+    local marker = Instance.new("BoolValue")
+    marker.Name = "AdvancedESP_Marker"
+    marker.Parent = obj
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "AdvancedESP_Highlight"
+    highlight.Adornee = obj
+    highlight.FillTransparency = 0.7
+    highlight.OutlineTransparency = 0.2
+    highlight.FillColor = self.Config.HighlightColor
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.Parent = obj
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "AdvancedESP_Billboard"
+    billboard.Size = UDim2.new(0, 200, 0, 40)
+    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = obj
+    billboard.Parent = obj
+
+    local label = Instance.new("TextLabel")
+    label.Text = icon .. " " .. displayName
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = self.Config.LabelSize
+    label.TextColor3 = self.Config.LabelColor
+    label.BackgroundTransparency = 1
+    label.TextStrokeTransparency = 0.5
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.Parent = billboard
+
+    table.insert(self.Instances, {
+        Object = obj,
+        Marker = marker,
+        Highlight = highlight,
+        Billboard = billboard,
+        Label = label
+    })
+
+    if self.Config.ShowDistance then
+        table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+            if not obj or not obj.Parent then return end
+            
+            local char = game.Players.LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local dist = (char.HumanoidRootPart.Position - obj.Position).Magnitude
+                if dist <= self.Config.MaxDistance then
+                    label.Text = string.format("%s %s\n[%dm]", icon, displayName, math.floor(dist))
+                    highlight.Enabled = true
+                    billboard.Enabled = true
+                else
+                    highlight.Enabled = false
+                    billboard.Enabled = false
+                end
+            end
+        end))
+    end
+end
+
+local GeneratorESP = AdvancedESP.new({"Main","Generator"})
+GeneratorESP:SetConfig({
+    SearchPath = "Workspace.Map.Ingame.Map",
+    HighlightColor = Color3.fromRGB(0, 200, 255),
+    MaxDistance = 1000,
+    LabelSize = 12
+})
+
+--]]
+--[[
 local AdvancedESP = {}
 AdvancedESP.__index = AdvancedESP
 
@@ -364,10 +561,232 @@ function AdvancedESP:SetConfig(config)
     end
     return self
 end
+--]]
+
+-- ========================
+-- 高级 ESP 系统 (完整版)
+-- ========================
+local AdvancedESP = {}
+AdvancedESP.__index = AdvancedESP
+
+-- 默认配置
+local DEFAULT_CONFIG = {
+    UpdateInterval = 1,              -- 更新频率(秒)
+    LoadWaitTime = 0.2,              -- 对象加载等待时间
+    HighlightColor = Color3.fromRGB(0, 200, 255),  -- 高亮颜色
+    LabelColor = Color3.fromRGB(255, 255, 255),    -- 标签颜色
+    LabelSize = 14,                  -- 字体大小
+    ShowDistance = true,             -- 显示距离
+    MaxDistance = 1000,              -- 最大显示距离(米)
+    ExactMatch = false,              -- 是否精确匹配名称
+    CheckMarker = true,              -- 是否检测标记
+    MarkerName = "Prompt",           -- 标记名称
+    SearchPath = "Workspace",        -- 搜索路径
+    ScanRecursive = true,            -- 是否递归搜索
+    DisplayNames = {}                 -- 自定义显示名称
+    ObjectColors = {}                 -- 对象特定颜色
+}
+
+function AdvancedESP.new(targetNames)
+    local self = setmetatable({}, AdvancedESP)
+    self.Config = table.clone(DEFAULT_CONFIG)
+    self.TargetNames = type(targetNames) == "table" and targetNames or {targetNames}
+    self.Active = false
+    self.Instances = {}
+    self.Connections = {}
+    return self
+end
+
+function AdvancedESP:_safeCall(func, ...)
+    local success, err = pcall(func, ...)
+    if not success then
+        warn("[ESP 错误]", err)
+        return false
+    end
+    return true
+end
+
+function AdvancedESP:_getFromPath(path)
+    local parts = string.split(path, ".")
+    local current = game
+    for _, part in ipairs(parts) do
+        if not current then return nil end
+        current = current:FindFirstChild(part)
+    end
+    return current
+end
+
+function AdvancedESP:_getDistance(obj)
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        return (char.HumanoidRootPart.Position - obj.Position).Magnitude
+    end
+    return math.huge
+end
+
+function AdvancedESP:_createESP(obj)
+    if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return false end
+    
+    local displayName = self.Config.DisplayNames[obj.Name] or obj.Name
+    local highlightColor = self.Config.ObjectColors[obj.Name] or self.Config.HighlightColor
+    
+    local marker = Instance.new("BoolValue")
+    marker.Name = "AdvancedESP_Marker"
+    marker.Parent = obj
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "AdvancedESP_Highlight"
+    highlight.Adornee = obj
+    highlight.FillTransparency = 0.7
+    highlight.OutlineTransparency = 0.2
+    highlight.FillColor = highlightColor
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.Parent = obj
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "AdvancedESP_Billboard"
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = obj
+    billboard.Parent = obj
+    
+    local label = Instance.new("TextLabel")
+    label.Text = displayName
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = self.Config.LabelSize
+    label.TextColor3 = self.Config.LabelColor
+    label.BackgroundTransparency = 1
+    label.TextStrokeTransparency = 0.5
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.Parent = billboard
+    
+    table.insert(self.Instances, {
+        Object = obj,
+        Marker = marker,
+        Highlight = highlight,
+        Billboard = billboard,
+        Label = label
+    })
+    
+    if self.Config.ShowDistance then
+        table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+            self:_safeCall(function()
+                if not obj or not obj.Parent then return end
+                
+                local dist = self:_getDistance(obj)
+                if dist <= self.Config.MaxDistance then
+                    label.Text = string.format("%s\n[%dm]", displayName, math.floor(dist))
+                    highlight.Enabled = true
+                    billboard.Enabled = true
+                else
+                    highlight.Enabled = false
+                    billboard.Enabled = false
+                end
+            end)
+        end))
+    end
+    
+    return true
+end
+
+function AdvancedESP:_isTarget(obj)
+    if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
+    
+    if self.Config.SearchPath ~= "Workspace" then
+        local targetPath = self:_getFromPath(self.Config.SearchPath)
+        if not targetPath or not obj:IsDescendantOf(targetPath) then
+            return false
+        end
+    end
+    
+    local nameMatch = false
+    for _, name in ipairs(self.TargetNames) do
+        if self.Config.ExactMatch then
+            if obj.Name == name then nameMatch = true break end
+        else
+            if string.find(obj.Name:lower(), name:lower()) then nameMatch = true break end
+        end
+    end
+    
+    if nameMatch and self.Config.CheckMarker then
+        return obj:FindFirstChild(self.Config.MarkerName) ~= nil
+    end
+    
+    return nameMatch
+end
+
+function AdvancedESP:_scanAndAdd()
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    
+    local function scan(parent)
+        for _, obj in ipairs(parent:GetChildren()) do
+            if self:_isTarget(obj) then
+                self:_createESP(obj)
+            end
+            if self.Config.ScanRecursive then
+                scan(obj)
+            end
+        end
+    end
+    
+    self:_safeCall(scan, targetPath)
+end
+
+function AdvancedESP:Start()
+    if self.Active then return end
+    self.Active = true
+    
+    self:_scanAndAdd()
+    
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
+        if self:_isTarget(obj) then
+            task.wait(self.Config.LoadWaitTime)
+            self:_createESP(obj)
+        end
+    end))
+    table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+        if os.clock() - (self._lastUpdate or 0) >= self.Config.UpdateInterval then
+            self:_scanAndAdd()
+            self._lastUpdate = os.clock()
+        end
+    end))
+end
+
+function AdvancedESP:Stop()
+    if not self.Active then return end
+    self.Active = false
+    
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
+    end
+    self.Connections = {}
+    
+    for _, data in ipairs(self.Instances) do
+        self:_safeCall(function()
+            data.Highlight:Destroy()
+            data.Billboard:Destroy()
+            data.Marker:Destroy()
+        end)
+    end
+    self.Instances = {}
+end
+
+function AdvancedESP:SetConfig(config)
+    for k, v in pairs(config) do
+        if self.Config[k] ~= nil then
+            self.Config[k] = v
+        end
+    end
+    return self
+end
+
 
 --workspace.Map.Ingame.Map:GetChildren()[20].Main
 
-local MainESP = AdvancedESP.new({"Main","发电机"})
+local MainESP = AdvancedESP.new({"Main","Generator"})
 
 MainESP:SetConfig({
     SearchPath = "Workspac.Map.Ingame.Map",
@@ -375,7 +794,16 @@ MainESP:SetConfig({
     MaxDistance = 100000,
     HighlightColor = Color3.fromRGB(0,200,255),
     CheckMarker = true,
-    MarkerName = "Prompt"
+    MarkerName = "Prompt",
+    LabelSize = 8,
+    DisplayName = {
+        Main = "⚡发电机",
+        Generator = "⚡发电机(可维修)"
+    }
+    ObjectColors = {
+        Main = fromRGB(0,200,255),
+        Generator = fromRGB(255,200,100)
+    }
 })
 
 local ESPTab = Window:CreateTab("ESP",nil)
