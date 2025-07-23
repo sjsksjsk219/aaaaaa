@@ -31,7 +31,7 @@ Rayfield:Notify({
     Title = "欢迎使用本脚本",
     Content = "开的时候演都不要演",
     Duration = 2,
-    Image = "☠️",
+    Image = nil,
     Actions = {
         Ignore = {
             Name = "好的",
@@ -53,7 +53,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "防挂机被踢",
                 Content = "已开启防挂机!",
                 Duration = 2,
-                Image = "😃"
+                Image = nil
             })
             while Value do
                 game:GetService("Players").LocalPlayer.PlayerData.Settings.Game.AFK.Value = false
@@ -64,7 +64,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "防挂机被踢",
                 Content = "已关闭防挂机!",
                 Duration = 2,
-                Image = "😱"
+                Image = nil
             })
         end
     end,
@@ -79,7 +79,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "Debug",
                 Content = "已开启Debug模式!",
                 Duration = 2,
-                Image = "😈"
+                Image = nil
             })
         else
             game:GetService("Players").LocalPlayer.PlayerData.Settings.Advanced.DebugMode.Value = false
@@ -87,7 +87,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "Debug",
                 Content = "已关闭Debug模式!",
                 Duration = 2,
-                Image = "👿"
+                Image = nil
             })
         end
     end,
@@ -131,7 +131,7 @@ local Input = MainTab:CreateInput({
                 Title = "修机",
                 Content = "请输入延迟!",
                 Duration = 2,
-                Image = "😡"
+                Image = nil
             })
         end
     end,
@@ -150,7 +150,7 @@ local Toggle = MainTab:CreateToggle({
             Rayfield:Notify({
                 Title = "自动修电机",
                 Content = "靠近电机自动维修!",
-                Image = "😎"
+                Image = nil
             })
         end
     end,
@@ -200,7 +200,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "无限体力",
                 Content = "正在定位你的角色...",
                 Duration = 2,
-                Image = "🤨"
+                Image = nil
             })
             
             local player = game.Players.LocalPlayer
@@ -217,7 +217,7 @@ local Toggle = MainTab:CreateToggle({
                                     Title = "无限体力",
                                     Content = "已找到!" .. survivor,
                                     Duration = 2,
-                                    Image = "😏"
+                                    Image = nil
                                 })
                                 break
                             end
@@ -268,8 +268,8 @@ local DEFAULT_CONFIG = {
         ExitGate = "出口大门"
     },
     ObjectIcons = {                 -- 对象图标
-        Main = "⚡",
-        Killer = "🔪"
+        Main = "",
+        Killer = ""
     }
 }
 
@@ -793,8 +793,8 @@ MainESP:SetConfig({
     MarkerName = "Prompt",
     LabelSize = 8,
     DisplayName = {
-        Main = "⚡发电机",
-        Generator = "⚡发电机(可维修)"
+        Main = "发电机",
+        Generator = "发电机(可维修)"
     },
     ObjectColors = {
         Main = fromRGB(0,200,255),
