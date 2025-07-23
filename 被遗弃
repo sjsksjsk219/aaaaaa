@@ -31,7 +31,7 @@ Rayfield:Notify({
     Title = "欢迎使用本脚本",
     Content = "开的时候演都不要演",
     Duration = 2,
-    Image = ☠️,
+    Image = "☠️",
     Actions = {
         Ignore = {
             Name = "好的",
@@ -53,7 +53,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "防挂机被踢",
                 Content = "已开启防挂机!",
                 Duration = 2,
-                Image = 😃
+                Image = "😃"
             })
             while Value do
                 game:GetService("Players").LocalPlayer.PlayerData.Settings.Game.AFK.Value = false
@@ -64,7 +64,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "防挂机被踢",
                 Content = "已关闭防挂机!",
                 Duration = 2,
-                Image = 😱
+                Image = "😱"
             })
         end
     end,
@@ -79,7 +79,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "Debug",
                 Content = "已开启Debug模式!",
                 Duration = 2,
-                Image = 😈
+                Image = "😈"
             })
         else
             game:GetService("Players").LocalPlayer.PlayerData.Settings.Advanced.DebugMode.Value = false
@@ -87,7 +87,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "Debug",
                 Content = "已关闭Debug模式!",
                 Duration = 2,
-                Image = 👿
+                Image = "👿"
             })
         end
     end,
@@ -131,7 +131,7 @@ local Input = MainTab:CreateInput({
                 Title = "修机",
                 Content = "请输入延迟!",
                 Duration = 2,
-                Image = 😡
+                Image = "😡"
             })
         end
     end,
@@ -150,7 +150,7 @@ local Toggle = MainTab:CreateToggle({
             Rayfield:Notify({
                 Title = "自动修电机",
                 Content = "靠近电机自动维修!",
-                Image = 😎
+                Image = "😎"
             })
         end
     end,
@@ -200,7 +200,7 @@ local Toggle = MainTab:CreateToggle({
                 Title = "无限体力",
                 Content = "正在定位你的角色...",
                 Duration = 2,
-                Image = 🤨
+                Image = "🤨"
             })
             
             local player = game.Players.LocalPlayer
@@ -217,7 +217,7 @@ local Toggle = MainTab:CreateToggle({
                                     Title = "无限体力",
                                     Content = "已找到!" .. survivor,
                                     Duration = 2,
-                                    Image = 😏
+                                    Image = "😏"
                                 })
                                 break
                             end
@@ -563,13 +563,9 @@ function AdvancedESP:SetConfig(config)
 end
 --]]
 
--- ========================
--- 高级 ESP 系统 (完整版)
--- ========================
 local AdvancedESP = {}
 AdvancedESP.__index = AdvancedESP
 
--- 默认配置
 local DEFAULT_CONFIG = {
     UpdateInterval = 1,              -- 更新频率(秒)
     LoadWaitTime = 0.2,              -- 对象加载等待时间
@@ -583,7 +579,7 @@ local DEFAULT_CONFIG = {
     MarkerName = "Prompt",           -- 标记名称
     SearchPath = "Workspace",        -- 搜索路径
     ScanRecursive = true,            -- 是否递归搜索
-    DisplayNames = {}                 -- 自定义显示名称
+    DisplayNames = {},                 -- 自定义显示名称
     ObjectColors = {}                 -- 对象特定颜色
 }
 
@@ -799,7 +795,7 @@ MainESP:SetConfig({
     DisplayName = {
         Main = "⚡发电机",
         Generator = "⚡发电机(可维修)"
-    }
+    },
     ObjectColors = {
         Main = fromRGB(0,200,255),
         Generator = fromRGB(255,200,100)
