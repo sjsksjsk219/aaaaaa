@@ -176,7 +176,7 @@ local Toggle = MainTab:CreateToggle({
             local function findAndModifyStamina()
                 while Value do
                     local character = player.Character
-                    if character then
+                    if character and character:FindFirstChild("HumanoidRootPart") then
                         for _, survivor in pairs(workspace.Players.Survivors:GetChildren()) do
                             if survivor.Name == player.Name and survivor:FindFirstChild("SpeedMultipliers") then
                                 local speedMultipliers = survivor.SpeedMultipliers
@@ -184,7 +184,7 @@ local Toggle = MainTab:CreateToggle({
                                     if originalSpeed == nil then
                                         originalSpeed = speedMultipliers.Sprinting.Value
                                     end
-                                    speedMultipliers.Sprinting.Value = 3
+                                    speedMultipliers.Sprinting.Value = 2.17
                                     break
                                 end
                             end
@@ -203,7 +203,7 @@ local Toggle = MainTab:CreateToggle({
                 end
                 if originalSpeed then
                     local character = player.Character
-                    if character then
+                    if character and character:FindFirstChild("HumanoidRootPart") then
                         for _, survivor in pairs(workspace.Players.Survivors:GetChildren()) do
                             if survivor.Name == player.Name and survivor:FindFirstChild("SpeedMultipliers") then
                                 local speedMultipliers = survivor.SpeedMultipliers
@@ -279,8 +279,8 @@ end
 function AdvancedESP:_createESP(obj)
     if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return false end
     
-    local displayName = self.Config.DisplayNames[obj.Name] or "杀手"
-    local highlightColor = self.Config.ObjectColors[obj.Name] or self.Config.HighlightColor
+    local displayName = "杀手"
+    local highlightColor = self.Config.HighlightColor
     
     local marker = Instance.new("BoolValue")
     marker.Name = "AdvancedESP_Marker"
@@ -353,20 +353,7 @@ function AdvancedESP:_isTarget(obj)
         end
     end
     
-    local nameMatch = false
-    for _, name in ipairs(self.TargetNames) do
-        if self.Config.ExactMatch then
-            if obj.Name == name then nameMatch = true break end
-        else
-            if string.find(obj.Name:lower(), name:lower()) then nameMatch = true break end
-        end
-    end
-    
-    if nameMatch and self.Config.CheckMarker then
-        return obj:FindFirstChild(self.Config.MarkerName) ~= nil
-    end
-    
-    return nameMatch
+    return true
 end
 
 function AdvancedESP:_scanAndAdd()
@@ -458,10 +445,7 @@ MainESP:SetConfig({
 local KillerESP = AdvancedESP.new({})
 KillerESP:SetConfig({
     SearchPath = "Workspace.Players.Killers",
-    HighlightColor = Color3.fromRGB(255, 0, 0),
-    DisplayNames = {
-        [""] = "杀手"
-    }
+    HighlightColor = Color3.fromRGB(255, 0, 0)
 })
 
 local ESPTab = Window:CreateTab("ESP",nil)
