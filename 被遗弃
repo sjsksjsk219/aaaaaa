@@ -215,7 +215,7 @@ local Toggle = MainTab:CreateToggle({
                                 speedMultipliers.Sprinting.Value = 3
                                 Rayfield:Notify({
                                     Title = "无限体力",
-                                    Content = "已找到!" .. survivor,
+                                    Content = "已找到!" .. survivor .. "",
                                     Duration = 2,
                                     Image = nil
                                 })
@@ -792,7 +792,7 @@ MainESP:SetConfig({
     CheckMarker = true,
     MarkerName = "Prompt",
     LabelSize = 8,
-    DisplayName = {
+    DisplayNames = {
         Main = "发电机",
         Generator = "发电机(可维修)"
     },
