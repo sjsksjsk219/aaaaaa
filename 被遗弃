@@ -72,7 +72,7 @@ local Toggle = MainTab:CreateToggle({
             })
         end
     end,
-}
+})
 
 local Toggle = MainTab:CreateToggle({
     Name = "开启Debug模式",
