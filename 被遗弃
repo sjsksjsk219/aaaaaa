@@ -1,3 +1,7 @@
+repeat
+    task.wait()
+until game:IsLoaded()
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -24,6 +28,128 @@ local Window = Rayfield:CreateWindow({
         GrabKeyFromSite = true,
         Key = {"https://pastebin.com/raw/5a5zfWn7"}
     }
+})
+
+
+Rayfield:Notify({
+    Title = "欢迎使用本脚本",
+    Content = "开的时候演都不要演",
+    Duration = 2,
+    Image = nil,
+    Actions = {
+        Ignore = {
+            Name = "好的",
+            Callback = function()
+                print("用户点了好的")
+            end
+        },
+    },
+})
+
+
+local MainTab = Window:CreateTab("主要",nil)
+
+local Toggle = MainTab:CreateToggle({
+    Name = "防挂机被踢",
+    Callback = function(Value)
+        if Value then
+            while Value do
+                game:GetService("Players").LocalPlayer.PlayerData.Settings.Game.AFK.Value = false
+                task.wait()
+            end
+            Rayfield:Notify({
+                Title = "防挂机被踢",
+                Content = "已开启防挂机!",
+                Duration = 2,
+                Image = nil
+            })
+        else
+            Rayfield:Notify({
+                Title = "防挂机被踢",
+                Content = "已关闭防挂机!",
+                Duration = 2,
+                Image = nil
+            })
+        end
+    end,
+}
+
+local Toggle = MainTab:CreateToggle({
+    Name = "开启Debug模式",
+    Callback = function(Value)
+        if Value then
+            game:GetService("Players").LocalPlayer.PlayerData.Settings.Advanced.DebugMode.Value = true
+            Rayfield:Notify({
+                Title = "Debug",
+                Content = "已开启Debug模式!",
+                Duration = 2,
+                Image = nil
+            })
+        else
+            game:GetService("Players").LocalPlayer.PlayerData.Settings.Advanced.DebugMode.Value = false
+            Rayfield:Notify({
+                Title = "Debug",
+                Content = "已关闭Debug模式!",
+                Duration = 2,
+                Image = nil
+            })
+        end
+    end,
+})
+
+--[[
+
+Rayfield:Notify({
+    Title = "欢迎使用本脚本",
+    Content = "开的时候演都不要演",
+    Duration = 2,
+    Image = nil,
+    Actions = {
+        Ignore = {
+            Name = "好的",
+            Callback = function()
+                print("用户点了好的")
+            end
+        },
+    },
+})
+
+--]]
+
+local Input = MainTab:CreateInput({
+    Name = "修机延迟",
+    PlaceholderText = "请输入",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Value)
+        if Value then
+           _G.WaitTime = (Value)
+        else
+            Rayfield:Notify({
+                Title = "修机",
+                Content = "请输入延迟!",
+                Duration = 2,
+                Image = nil
+            })
+        end
+    end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "自动修电机",
+    Callback = function(Value)
+        if Value then
+            if _G.WaitTime then
+                while Value do
+                    workspace.Map.Ingame.Map.Generator.Remotes.RE:FireServer()
+                    task.wait(_G.WaitTime)
+                end
+            end
+            Rayfield:Notify({
+                Title = "自动修电机",
+                Content = "靠近电机自动维修!"
+            })
+        end
+    end,
 })
 
 local AdvancedESP = {}
