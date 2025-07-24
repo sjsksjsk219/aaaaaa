@@ -48,7 +48,7 @@ local Window = Rayfield:CreateWindow({
         Invite = "discord.gg/Mspaint",
         RememberJoins = true
     },
-    KeySystem = true,
+    KeySystem = false,
     KeySettings = {
         Title ="卡密系统",
         Subtitle = "点击获取链接",
