@@ -171,22 +171,20 @@ local Toggle = MainTab:CreateToggle({
         if Value then
             local player = game.Players.LocalPlayer
             local staminaThread
-            local originalSpeed = nil
             
             local function findAndModifyStamina()
                 while Value do
                     local character = player.Character
                     if character and character:FindFirstChild("HumanoidRootPart") then
                         for _, survivor in pairs(workspace.Players.Survivors:GetChildren()) do
-                            if survivor.Name == player.Name and survivor:FindFirstChild("SpeedMultipliers") then
-                                local speedMultipliers = survivor.SpeedMultipliers
-                                if speedMultipliers:FindFirstChild("Sprinting") then
-                                    if originalSpeed == nil then
-                                        originalSpeed = speedMultipliers.Sprinting.Value
+                            if survivor.Name == player.Name then
+                                if survivor:FindFirstChild("SpeedMultipliers") then
+                                    local speedMultipliers = survivor.SpeedMultipliers
+                                    if speedMultipliers:FindFirstChild("Sprinting") then
+                                        speedMultipliers.Sprinting.Value = 2.17
                                     end
-                                    speedMultipliers.Sprinting.Value = 2.17
-                                    break
                                 end
+                                break
                             end
                         end
                     end
@@ -201,20 +199,21 @@ local Toggle = MainTab:CreateToggle({
                 if staminaThread then
                     task.cancel(staminaThread)
                 end
-                if originalSpeed then
-                    local character = player.Character
-                    if character and character:FindFirstChild("HumanoidRootPart") then
-                        for _, survivor in pairs(workspace.Players.Survivors:GetChildren()) do
-                            if survivor.Name == player.Name and survivor:FindFirstChild("SpeedMultipliers") then
-                                local speedMultipliers = survivor.SpeedMultipliers
-                                if speedMultipliers:FindFirstChild("Sprinting") then
-                                    speedMultipliers.Sprinting.Value = originalSpeed
-                                end
-                            end
-                        end
-                    end
-                end
             end)
+            
+            Rayfield:Notify({
+                Title = "无限体力",
+                Content = "已开启无限体力!",
+                Duration = 2,
+                Image = nil
+            })
+        else
+            Rayfield:Notify({
+                Title = "无限体力",
+                Content = "已关闭无限体力!",
+                Duration = 2,
+                Image = nil
+            })
         end
     end
 })
@@ -986,7 +985,8 @@ KillerESP:SetConfig({
     HighlightColor = Color3.fromRGB(255, 0, 0),
     DisplayNames = {
         [""] = "杀手"
-    }
+    },
+    ScanRecursive = false
 })
 
 local ESPTab = Window:CreateTab("ESP",nil)
