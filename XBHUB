@@ -1,4 +1,4 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfieldb'))()
 
 Rayfield:Notify({
     Title = "XB脚本",
@@ -57,6 +57,98 @@ Rayfield:Notify({
     },
 })
 
+local MainTab = Window:CreateTab("主要",nil)
+
+local Slider = MainTab:CreateSlider({
+   Name = "速度",
+   Range = {0,6},
+   Increment = 10,
+   Suffix = "速度",
+   CurrentValue = 1,
+   Flag = nil, -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+       Workspace.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value * 4 
+   end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "高亮",
+    Callback = function(Value)
+        if Value then
+            local Players = game:GetService("Players")
+            local Lighting = game:GetService("Lighting")
+            local player = Players.LocalPlayer
+            local camera = workspace.CurrentCamera
+
+            local bloom = Instance.new("BloomEffect")
+            bloom.Parent = camera
+            bloom.Intensity = 1.5
+            bloom.Threshold = 0
+            bloom.Size = 32
+
+            Lighting.Outlines = false
+            local colorCorrection = Instance.new("ColorCorrectionEffect")
+            colorCorrection.Parent = camera
+            colorCorrection.Brightness = 0.5
+            colorCorrection.Contrast = 0.3
+            colorCorrection.Saturation = 0.1
+        else
+            local Players = game:GetService("Players")
+            local camera = workspace.CurrentCamera
+            local player = Players.LocalPlayer
+            for _, effect in ipairs(camera:GetChildren()) do
+                if effect:IsA("BloomEffect") or effect:IsA("ColorCorrectionEffect") then
+                    effect:Destroy()
+                end
+            end
+        end
+    end,                
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "低画质",
+    Callback = function(Value)
+        if Value then
+            local Players = game:GetService("Players")
+            local player = Players.LocalPlayer
+
+            if player.Character then
+                for _, part in ipairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CastShadow = false
+                    end
+                end
+            end
+
+            player.CharacterAdded:Connect(function(character)
+                for _, part in ipairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CastShadow = false
+                    end
+                end
+            end)
+        else
+            local Players = game:GetService("Players")
+            local player = Players.LocalPlayer
+
+            if player.Character then
+                for _, part in ipairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CastShadow = true
+                    end
+                end
+            end
+
+            player.CharacterAdded:Connect(function(character)
+                for _, part in ipairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CastShadow = true
+                    end
+                end
+            end)
+        end
+    end,
+})
 
 local AdvancedESP = {}
 AdvancedESP.__index = AdvancedESP
@@ -302,6 +394,36 @@ workspace.CurrentRooms["7"].Assets:GetChildren()[15]
 workspace.CurrentRooms["0"].Door.Door.Attachment
 --]]
 
+local SnareESP = AdvancedESP.new({"Snare","地刺"})
+SnareESP:SetConfig({
+    ScanRecursive = true,
+    MaxDistance = 10000000,
+    HighlightColor = Color3.fromRGB(144,238,144),
+    LabelSize = 8,
+    CheckMarker = false,
+    ExactMatch = true,
+    ShowDistance = true,
+    DisplayName = {
+        Snare = "地刺"
+    }
+})
+
+local MandrakeESP = AdvancedESP.new({"Mandrake","萝卜"})
+MandrakeESP:SetConfig({
+    ScanRecursive = true,
+    MaxDistance = 10000000,
+    HighlightColor = Color3.fromRGB(144,238,144),
+    LabelSize = 8,
+    CheckMarker = true,
+    ExactMatch = true,
+    MarkerName = "Body",
+    ShowDistance = true,
+    DisplayName = {
+        Mandrake = "萝卜"
+    }
+})
+
+
 local DoorESP = AdvancedESP.new({"Door","门"})
 DoorESP:SetConfig({
     ScanRecursive = true,
@@ -339,6 +461,27 @@ local Toggle = ESPTab:CreateToggle({
     Name = "监管透视",
     Callback = function(Value)
         if Value then GroundskeeperESP:Start() else GroundskeeperESP:Stop() end
+    end,
+})
+
+local Toggle = ESPTab:CreateToggle({
+    Name = "门透视",
+    Callback = function(Value)
+        if Value then DoorESP:Start() else DoorESP:Stop() end
+    end,
+})
+
+local Toggle = ESPTab:CreateToggle({
+    Name = "地刺透视",
+    Callback = functionn(Value)
+        if Value then SnareESP:Start() else SnareESP:Stop() end
+    end,
+})
+
+local Toggle = ESPTab:CreateToggle({
+    Name = "萝卜透视",
+    Callback = function(Value)
+        if Value then MandrakeESP:Start() else MandrakeESP:Stop() end
     end,
 })
 
