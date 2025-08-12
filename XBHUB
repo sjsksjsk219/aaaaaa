@@ -137,6 +137,226 @@ local Slider = MainTab:CreateSlider({
         end,
     })
 
+--[[local AdvancedESP = {}
+AdvancedESP.__index = AdvancedESP
+
+local DEFAULT_CONFIG = {
+    UpdateInterval = 1,
+    LoadWaitTime = 0.2,
+    HighlightColor = Color3.fromRGB(255, 0, 0),
+    LabelColor = Color3.fromRGB(255, 255, 255),
+    LabelSize = 14,
+    ShowDistance = true,
+    MaxDistance = 1000,
+    ExactMatch = false,
+    CheckMarker = false,
+    MarkerName = "",
+    SearchPath = "Workspace",
+    ScanRecursive = true,
+    DisplayNames = {},
+    ObjectColors = {}
+}
+
+function AdvancedESP.new(targetNames)
+    local self = setmetatable({}, AdvancedESP)
+    self.Config = table.clone(DEFAULT_CONFIG)
+    self.TargetNames = type(targetNames) == "table" and targetNames or {targetNames}
+    self.Active = false
+    self.Instances = {}
+    self.Connections = {}
+    return self
+end
+
+function AdvancedESP:_safeCall(func, ...)
+    local success, err = pcall(func, ...)
+    if not success then
+        warn("[ESP 错误]", err)
+        return false
+    end
+    return true
+end
+
+function AdvancedESP:_getFromPath(path)
+    local parts = string.split(path, ".")
+    local current = game
+    for _, part in ipairs(parts) do
+        if not current then return nil end
+        current = current:FindFirstChild(part)
+    end
+    return current
+end
+
+function AdvancedESP:_getDistance(obj)
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        return (char.HumanoidRootPart.Position - obj.Position).Magnitude
+    end
+    return math.huge
+end
+
+function AdvancedESP:_createESP(obj)
+    if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return false end
+    
+    local displayName = self.Config.DisplayNames[obj.Name] or obj.Name
+    local highlightColor = self.Config.ObjectColors[obj.Name] or self.Config.HighlightColor
+    
+    local marker = Instance.new("BoolValue")
+    marker.Name = "AdvancedESP_Marker"
+    marker.Parent = obj
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "AdvancedESP_Highlight"
+    highlight.Adornee = obj
+    highlight.FillTransparency = 0.7
+    highlight.OutlineTransparency = 0.2
+    highlight.FillColor = highlightColor
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.Parent = obj
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "AdvancedESP_Billboard"
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = obj
+    billboard.Parent = obj
+    
+    local label = Instance.new("TextLabel")
+    label.Text = displayName
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = self.Config.LabelSize
+    label.TextColor3 = self.Config.LabelColor
+    label.BackgroundTransparency = 1
+    label.TextStrokeTransparency = 0.5
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.Parent = billboard
+    
+    table.insert(self.Instances, {
+        Object = obj,
+        Marker = marker,
+        Highlight = highlight,
+        Billboard = billboard,
+        Label = label
+    })
+    
+    if self.Config.ShowDistance then
+        table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+            self:_safeCall(function()
+                if not obj or not obj.Parent then return end
+                
+                local dist = self:_getDistance(obj)
+                if dist <= self.Config.MaxDistance then
+                    label.Text = string.format("%s\n[%dm]", displayName, math.floor(dist))
+                    highlight.Enabled = true
+                    billboard.Enabled = true
+                else
+                    highlight.Enabled = false
+                    billboard.Enabled = false
+                end
+            end)
+        end))
+    end
+    
+    return true
+end
+
+function AdvancedESP:_isTarget(obj)
+    if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
+    
+    if self.Config.SearchPath ~= "Workspace" then
+        local targetPath = self:_getFromPath(self.Config.SearchPath)
+        if not targetPath or not obj:IsDescendantOf(targetPath) then
+            return false
+        end
+    end
+    
+    if #self.TargetNames == 0 then return true end
+    
+    local nameMatch = false
+    for _, name in ipairs(self.TargetNames) do
+        if self.Config.ExactMatch then
+            if obj.Name == name then nameMatch = true break end
+        else
+            if string.find(obj.Name:lower(), name:lower()) then nameMatch = true break end
+        end
+    end
+    
+    if nameMatch and self.Config.CheckMarker then
+        return obj:FindFirstChild(self.Config.MarkerName) ~= nil
+    end
+    
+    return nameMatch
+end
+
+function AdvancedESP:_scanAndAdd()
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    
+    local function scan(parent)
+        for _, obj in ipairs(parent:GetChildren()) do
+            if self:_isTarget(obj) then
+                self:_createESP(obj)
+            end
+            if self.Config.ScanRecursive then
+                scan(obj)
+            end
+        end
+    end
+    
+    self:_safeCall(scan, targetPath)
+end
+
+function AdvancedESP:Start()
+    if self.Active then return end
+    self.Active = true
+    
+    self:_scanAndAdd()
+    
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
+        if self:_isTarget(obj) then
+            task.wait(self.Config.LoadWaitTime)
+            self:_createESP(obj)
+        end
+    end))
+    
+    table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+        if os.clock() - (self._lastUpdate or 0) >= self.Config.UpdateInterval then
+            self:_scanAndAdd()
+            self._lastUpdate = os.clock()
+        end
+    end))
+end
+
+function AdvancedESP:Stop()
+    if not self.Active then return end
+    self.Active = false
+    
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
+    end
+    self.Connections = {}
+    
+    for _, data in ipairs(self.Instances) do
+        self:_safeCall(function()
+            data.Highlight:Destroy()
+            data.Billboard:Destroy()
+            data.Marker:Destroy()
+        end)
+    end
+    self.Instances = {}
+end
+
+function AdvancedESP:SetConfig(config)
+    for k, v in pairs(config) do
+        if self.Config[k] ~= nil then
+            self.Config[k] = v
+        end
+    end
+    return self
+end
+--]]
+
 local AdvancedESP = {}
 AdvancedESP.__index = AdvancedESP
 
@@ -355,6 +575,7 @@ function AdvancedESP:SetConfig(config)
     end
     return self
 end
+
 
 local MonumentESP = AdvancedESP.new({"MonumentEntity","柱子"})
 MonumentESP:SetConfig({
