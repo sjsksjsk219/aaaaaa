@@ -473,7 +473,7 @@ local Toggle = ESPTab:CreateToggle({
 
 local Toggle = ESPTab:CreateToggle({
     Name = "地刺透视",
-    Callback = functionn(Value)
+    Callback = function(Value)
         if Value then SnareESP:Start() else SnareESP:Stop() end
     end,
 })
