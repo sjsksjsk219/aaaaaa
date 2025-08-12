@@ -284,6 +284,7 @@ MonumentESP:SetConfig({
     HighlightColor = Color3.fromRGB(255,182,193),
     CheckMarker = false,
     LabelSize = 8,
+    ShowDistance = true,
     DisplayNames = {
         MonumentEntity = "柱子怪"
     }
@@ -295,6 +296,10 @@ workspace.CurrentRooms["3"].Groundskeeper
 workspace.CurrentRooms["3"].Mandrakes:GetChildren()[7].Mandrake
 workspace.CurrentRooms["3"].Snares:GetChildren()[6].Snare
 workspace.CurrentRooms["1"].Assets:GetChildren()[34].LotusPetalPickup.Handle
+workspace.CurrentRooms["8"].Snares:GetChildren()[3].Snare.Holes
+workspace.CurrentRooms["9"].Mandrakes:GetChildren()[5].Mandrake.Body
+workspace.CurrentRooms["7"].Assets:GetChildren()[15]
+workspace.CurrentRooms["0"].Door.Door.Attachment
 --]]
 
 local DoorESP = AdvancedESP.new({"Door","门"})
@@ -303,6 +308,9 @@ DoorESP:SetConfig({
     MaxDistance = 10000000,
     HighlightColor = Color3.fromRGB(144,238,144),
     LabelSize = 8,
+    CheckMarker = true,
+    MarkerName = "Attachment",
+    ShowDistance = true,
     DisplayName = {
         Door = "门"
     }
