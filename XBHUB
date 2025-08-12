@@ -327,6 +327,13 @@ local Toggle = ESPTab:CreateToggle({
     end,
 })
 
+local Toggle = ESPTab:CreateToggle({
+    Name = "监管透视",
+    Callback = function(Value)
+        if Value then GroundskeeperESP:Start() else GroundskeeperESP:Stop() end
+    end,
+})
+
 local OtherTab = Window:CreateTab("其它",nil)
 
 local Button = OtherTab:CreateButton({
@@ -337,7 +344,7 @@ local Button = OtherTab:CreateButton({
 })
 
 local Button = OtherTab:CreateButton({
-    name = "Spy",
+    Name = "Spy",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))()
     end,
