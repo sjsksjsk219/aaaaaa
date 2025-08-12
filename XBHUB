@@ -1,22 +1,19 @@
-
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 Rayfield:Notify({
     Title = "XB脚本",
     Content = "检测中......",
-    Duration = 3
+    Duration = 3,
+    Image = nil
 })
 
 if game.PlaceId == 6839171747 then
 
-repeat
-    task.wait()
-until game:IsLoaded()
-
 Rayfield:Notify({
     Title = "XB脚本",
-    Content = "检测到THE OUTDOORS,已自动开启脚本",
-    Duration = 5
+    Content = "检测到THE_OUTDOORS,已自动开启脚本",
+    Duration = 5,
+    Image = nil
 })
 
 local Window = Rayfield:CreateWindow({
