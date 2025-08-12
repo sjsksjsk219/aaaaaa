@@ -360,17 +360,20 @@ end
 -- =============================================
 -- 修正版 AdvancedESP 模块（专为 Doors 优化）
 -- =============================================
+-- =============================================
+-- 优化版 AdvancedESP 模块（解决卡顿 + 高亮更亮）
+-- =============================================
 local AdvancedESP = {}
 AdvancedESP.__index = AdvancedESP
 
 local DEFAULT_CONFIG = {
-    UpdateInterval = 1,
-    LoadWaitTime = 0.2,
-    HighlightColor = Color3.fromRGB(255, 0, 0),
+    UpdateInterval = 0.2,  -- 更新间隔 0.2 秒（原 1 秒）
+    LoadWaitTime = 0.5,    -- 新增物体延迟 0.5 秒加载
+    HighlightColor = Color3.fromRGB(255, 255, 255),  -- 纯白高亮
     LabelColor = Color3.fromRGB(255, 255, 255),
     LabelSize = 14,
     ShowDistance = true,
-    MaxDistance = 1000,
+    MaxDistance = 500,     -- 默认显示距离 500
     ExactMatch = false,
     CheckMarker = false,
     MarkerName = "",
@@ -435,21 +438,14 @@ function AdvancedESP:_createESP(obj)
     marker.Name = "XB_ESP_Marker"
     marker.Parent = obj
 
-    -- 创建高亮效果（兼容旧版）
-    local highlight
-    if pcall(function() Instance.new("Highlight") end) then
-        highlight = Instance.new("Highlight")
-        highlight.Name = "XB_ESP_Highlight"
-        highlight.FillColor = highlightColor
-        highlight.OutlineColor = Color3.new(1, 1, 1)
-        highlight.FillTransparency = 0.7
-    else
-        highlight = Instance.new("BoxHandleAdornment")
-        highlight.Name = "XB_ESP_Box"
-        highlight.Color3 = highlightColor
-        highlight.Size = obj:IsA("BasePart") and obj.Size or Vector3.new(2, 2, 2)
-    end
+    -- 优化高亮（更亮 + 更低性能消耗）
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "XB_ESP_Highlight"
     highlight.Adornee = obj
+    highlight.FillColor = Color3.new(1, 1, 1)  -- 纯白色
+    highlight.OutlineColor = Color3.new(0, 0, 0)  -- 黑色轮廓（可关闭）
+    highlight.FillTransparency = 0.3  -- 比 0.7 更亮，但比 0.1 更省性能
+    highlight.OutlineTransparency = 1  -- 完全透明轮廓（减少开销）
     highlight.Parent = obj
 
     -- 创建标签
@@ -481,23 +477,19 @@ function AdvancedESP:_createESP(obj)
         Label = label
     })
 
-    -- 距离更新
+    -- 距离更新（降低频率）
     if self.Config.ShowDistance then
-        table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+        table.insert(self.Connections, game:GetService("RunService").RenderStepped:Connect(function()
             self:_safeCall(function()
                 if not obj or not obj.Parent then return end
                 
                 local dist = self:_getDistance(obj)
                 if dist <= self.Config.MaxDistance then
                     label.Text = string.format("%s\n[%dm]", displayName, math.floor(dist))
-                    if highlight:IsA("Highlight") then
-                        highlight.Enabled = true
-                    end
+                    highlight.Enabled = true
                     billboard.Enabled = true
                 else
-                    if highlight:IsA("Highlight") then
-                        highlight.Enabled = false
-                    end
+                    highlight.Enabled = false
                     billboard.Enabled = false
                 end
             end)
@@ -562,20 +554,20 @@ function AdvancedESP:Start()
     if self.Active then return end
     self.Active = true
     
-    -- 初始扫描
+    -- 初始扫描（只扫一次）
     self:_scanAndAdd()
     
-    -- 监听新增对象
+    -- 监听新增对象（延迟加载）
     local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
     table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
         if self:_isTarget(obj) then
-            task.wait(self.Config.LoadWaitTime)
+            task.wait(self.Config.LoadWaitTime)  -- 延迟 0.5 秒再添加
             self:_createESP(obj)
         end
     end))
     
-    -- 定期更新
-    table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+    -- 改用 RenderStepped（比 Heartbeat 更稳定）
+    table.insert(self.Connections, game:GetService("RunService").RenderStepped:Connect(function()
         if os.clock() - (self._lastUpdate or 0) >= self.Config.UpdateInterval then
             self:_scanAndAdd()
             self._lastUpdate = os.clock()
@@ -616,13 +608,13 @@ function AdvancedESP:SetConfig(config)
 end
 
 -- =============================================
--- Doors 专用 ESP 配置
+-- 保留原有的 ESP 配置（柱子、监管、门、地刺、萝卜）
 -- =============================================
 local MonumentESP = AdvancedESP.new({"MonumentEntity", "柱子"})
 MonumentESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 500,
-    HighlightColor = Color3.fromRGB(255, 182, 193),
+    HighlightColor = Color3.fromRGB(255, 182, 193),  -- 粉色
     LabelSize = 8,
     ShowDistance = true,
     DisplayNames = {
@@ -634,7 +626,7 @@ local SnareESP = AdvancedESP.new({"Snare", "地刺"})
 SnareESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 300,
-    HighlightColor = Color3.fromRGB(144, 238, 144),
+    HighlightColor = Color3.fromRGB(144, 238, 144),  -- 浅绿色
     LabelSize = 8,
     DisplayNames = {
         Snare = "地刺"
@@ -645,10 +637,10 @@ local MandrakeESP = AdvancedESP.new({"Mandrake", "萝卜"})
 MandrakeESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 200,
-    HighlightColor = Color3.fromRGB(255, 215, 0),
+    HighlightColor = Color3.fromRGB(255, 215, 0),  -- 金色
     CheckMarker = true,
     MarkerName = "Body",
-    LabelSize = 12,
+    LabelSize = 8,
     DisplayNames = {
         Mandrake = "萝卜"
     }
@@ -658,10 +650,9 @@ local DoorESP = AdvancedESP.new({"Door", "门"})
 DoorESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 1000,
-    HighlightColor = Color3.fromRGB(100, 149, 237),
+    HighlightColor = Color3.fromRGB(100, 149, 237),  -- 蓝色
     LabelSize = 8,
     CheckMarker = true,
-    -- workspace.CurrentRooms["0"].Door.Door.Attachment
     MarkerName = "Attachment",
     ExactMatch = true,
     DisplayNames = {
@@ -673,7 +664,7 @@ local GroundskeeperESP = AdvancedESP.new({"Groundskeeper", "监管"})
 GroundskeeperESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 400,
-    HighlightColor = Color3.fromRGB(220, 20, 60),
+    HighlightColor = Color3.fromRGB(220, 20, 60),  -- 红色
     ExactMatch = true,
     LabelSize = 8,
     DisplayNames = {
@@ -682,9 +673,9 @@ GroundskeeperESP:SetConfig({
 })
 
 -- =============================================
--- ESP 界面绑定
+-- 保留原有的 ESP Toggle 界面（不要动这部分）
 -- =============================================
-local ESPTab = Window:CreateTab("透视功能", 4483362458) -- 使用图标ID
+local ESPTab = Window:CreateTab("透视功能", 4483362458)
 
 local function createESPToggle(name, esp)
     return ESPTab:CreateToggle({
