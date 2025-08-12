@@ -611,7 +611,7 @@ SnareESP:SetConfig({
     CheckMarker = false,
     ExactMatch = true,
     ShowDistance = true,
-    DisplayName = {
+    DisplayNames = {
         Snare = "地刺"
     }
 })
@@ -626,7 +626,7 @@ MandrakeESP:SetConfig({
     ExactMatch = true,
     MarkerName = "Body",
     ShowDistance = true,
-    DisplayName = {
+    DisplayNames = {
         Mandrake = "萝卜"
     }
 })
@@ -641,7 +641,7 @@ DoorESP:SetConfig({
     CheckMarker = true,
     MarkerName = "Attachment",
     ShowDistance = true,
-    DisplayName = {
+    DisplayNames = {
         Door = "门"
     }
 })
@@ -652,7 +652,7 @@ GroundskeeperESP:SetConfig({
     MaxDistance = 1000000,
     HighlightColor = Color3.fromRGB(255,182,193),
     LabelSize = 8,
-    DisplayName = {
+    DisplayNames = {
         Groundskeeper = "监管"
     }
 })
