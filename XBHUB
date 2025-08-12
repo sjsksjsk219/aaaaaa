@@ -357,6 +357,9 @@ function AdvancedESP:SetConfig(config)
 end
 --]]
 
+-- =============================================
+-- 修正版 AdvancedESP 模块（专为 Doors 优化）
+-- =============================================
 local AdvancedESP = {}
 AdvancedESP.__index = AdvancedESP
 
@@ -390,57 +393,74 @@ end
 function AdvancedESP:_safeCall(func, ...)
     local success, err = pcall(func, ...)
     if not success then
-        warn("[ESP 错误]", err)
-        return false
+        warn("[XB ESP ERROR]", err, debug.traceback())
     end
-    return true
+    return success
 end
 
 function AdvancedESP:_getFromPath(path)
-    local parts = string.split(path, ".")
+    local parts = {}
+    for part in string.gmatch(path, "[^%.]+") do
+        table.insert(parts, part)
+    end
     local current = game
     for _, part in ipairs(parts) do
-        if not current then return nil end
         current = current:FindFirstChild(part)
+        if not current then return nil end
     end
     return current
 end
 
 function AdvancedESP:_getDistance(obj)
     local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        return (char.HumanoidRootPart.Position - obj.Position).Magnitude
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        return math.huge
     end
-    return math.huge
+    local objPos = obj:IsA("BasePart") and obj.Position or obj:GetPivot().Position
+    return (char.HumanoidRootPart.Position - objPos).Magnitude
 end
 
 function AdvancedESP:_createESP(obj)
-    if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return false end
-    
+    -- 安全性检查
+    if not obj or not obj.Parent or obj:FindFirstChild("XB_ESP_Marker") then 
+        return false 
+    end
+
+    -- 配置获取
     local displayName = self.Config.DisplayNames[obj.Name] or obj.Name
     local highlightColor = self.Config.ObjectColors[obj.Name] or self.Config.HighlightColor
-    
+
+    -- 创建标记
     local marker = Instance.new("BoolValue")
-    marker.Name = "AdvancedESP_Marker"
+    marker.Name = "XB_ESP_Marker"
     marker.Parent = obj
-    
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "AdvancedESP_Highlight"
+
+    -- 创建高亮效果（兼容旧版）
+    local highlight
+    if pcall(function() Instance.new("Highlight") end) then
+        highlight = Instance.new("Highlight")
+        highlight.Name = "XB_ESP_Highlight"
+        highlight.FillColor = highlightColor
+        highlight.OutlineColor = Color3.new(1, 1, 1)
+        highlight.FillTransparency = 0.7
+    else
+        highlight = Instance.new("BoxHandleAdornment")
+        highlight.Name = "XB_ESP_Box"
+        highlight.Color3 = highlightColor
+        highlight.Size = obj:IsA("BasePart") and obj.Size or Vector3.new(2, 2, 2)
+    end
     highlight.Adornee = obj
-    highlight.FillTransparency = 0.7
-    highlight.OutlineTransparency = 0.2
-    highlight.FillColor = highlightColor
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
     highlight.Parent = obj
-    
+
+    -- 创建标签
     local billboard = Instance.new("BillboardGui")
-    billboard.Name = "AdvancedESP_Billboard"
+    billboard.Name = "XB_ESP_Billboard"
     billboard.Size = UDim2.new(0, 200, 0, 50)
     billboard.StudsOffset = Vector3.new(0, 2.5, 0)
     billboard.AlwaysOnTop = true
     billboard.Adornee = obj
     billboard.Parent = obj
-    
+
     local label = Instance.new("TextLabel")
     label.Text = displayName
     label.Size = UDim2.new(1, 0, 1, 0)
@@ -449,9 +469,10 @@ function AdvancedESP:_createESP(obj)
     label.TextColor3 = self.Config.LabelColor
     label.BackgroundTransparency = 1
     label.TextStrokeTransparency = 0.5
-    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.TextStrokeColor3 = Color3.new(0, 0, 0)
     label.Parent = billboard
-    
+
+    -- 存储实例
     table.insert(self.Instances, {
         Object = obj,
         Marker = marker,
@@ -459,7 +480,8 @@ function AdvancedESP:_createESP(obj)
         Billboard = billboard,
         Label = label
     })
-    
+
+    -- 距离更新
     if self.Config.ShowDistance then
         table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
             self:_safeCall(function()
@@ -468,45 +490,55 @@ function AdvancedESP:_createESP(obj)
                 local dist = self:_getDistance(obj)
                 if dist <= self.Config.MaxDistance then
                     label.Text = string.format("%s\n[%dm]", displayName, math.floor(dist))
-                    highlight.Enabled = true
+                    if highlight:IsA("Highlight") then
+                        highlight.Enabled = true
+                    end
                     billboard.Enabled = true
                 else
-                    highlight.Enabled = false
+                    if highlight:IsA("Highlight") then
+                        highlight.Enabled = false
+                    end
                     billboard.Enabled = false
                 end
             end)
         end))
     end
-    
+
     return true
 end
 
 function AdvancedESP:_isTarget(obj)
+    -- 基础类型检查
+    if not obj or not obj.Parent then return false end
     if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
-    
+
+    -- 路径检查
     if self.Config.SearchPath ~= "Workspace" then
         local targetPath = self:_getFromPath(self.Config.SearchPath)
         if not targetPath or not obj:IsDescendantOf(targetPath) then
             return false
         end
     end
-    
+
+    -- 名称匹配
     if #self.TargetNames == 0 then return true end
+    local lowerName = obj.Name:lower()
     
-    local nameMatch = false
     for _, name in ipairs(self.TargetNames) do
+        local lowerTarget = name:lower()
         if self.Config.ExactMatch then
-            if obj.Name == name then nameMatch = true break end
+            if lowerName == lowerTarget then return true end
         else
-            if string.find(obj.Name:lower(), name:lower()) then nameMatch = true break end
+            if lowerName:find(lowerTarget) then return true end
         end
     end
-    
-    if nameMatch and self.Config.CheckMarker then
+
+    -- 标记检查
+    if self.Config.CheckMarker then
         return obj:FindFirstChild(self.Config.MarkerName) ~= nil
     end
-    
-    return nameMatch
+
+    return false
 end
 
 function AdvancedESP:_scanAndAdd()
@@ -530,8 +562,10 @@ function AdvancedESP:Start()
     if self.Active then return end
     self.Active = true
     
+    -- 初始扫描
     self:_scanAndAdd()
     
+    -- 监听新增对象
     local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
     table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
         if self:_isTarget(obj) then
@@ -540,6 +574,7 @@ function AdvancedESP:Start()
         end
     end))
     
+    -- 定期更新
     table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
         if os.clock() - (self._lastUpdate or 0) >= self.Config.UpdateInterval then
             self:_scanAndAdd()
@@ -552,16 +587,20 @@ function AdvancedESP:Stop()
     if not self.Active then return end
     self.Active = false
     
+    -- 断开连接
     for _, conn in ipairs(self.Connections) do
         conn:Disconnect()
     end
     self.Connections = {}
     
+    -- 清理实例
     for _, data in ipairs(self.Instances) do
         self:_safeCall(function()
-            data.Highlight:Destroy()
-            data.Billboard:Destroy()
-            data.Marker:Destroy()
+            for _, child in ipairs(data.Object:GetChildren()) do
+                if child.Name:find("XB_ESP_") then
+                    child:Destroy()
+                end
+            end
         end)
     end
     self.Instances = {}
@@ -576,122 +615,100 @@ function AdvancedESP:SetConfig(config)
     return self
 end
 
-
-local MonumentESP = AdvancedESP.new({"MonumentEntity","柱子"})
+-- =============================================
+-- Doors 专用 ESP 配置
+-- =============================================
+local MonumentESP = AdvancedESP.new({"MonumentEntity", "柱子", "Monster"})
 MonumentESP:SetConfig({
     ScanRecursive = true,
-    MaxDistance = 100000,
-    HighlightColor = Color3.fromRGB(255,182,193),
-    CheckMarker = false,
-    LabelSize = 8,
+    MaxDistance = 500,
+    HighlightColor = Color3.fromRGB(255, 182, 193),
+    LabelSize = 12,
     ShowDistance = true,
     DisplayNames = {
-        MonumentEntity = "柱子怪"
+        MonumentEntity = "柱子怪",
+        Monster = "怪物"
     }
 })
 
---[[
-workspace.CurrentRooms["3"].Door.Door
-workspace.CurrentRooms["3"].Groundskeeper
-workspace.CurrentRooms["3"].Mandrakes:GetChildren()[7].Mandrake
-workspace.CurrentRooms["3"].Snares:GetChildren()[6].Snare
-workspace.CurrentRooms["1"].Assets:GetChildren()[34].LotusPetalPickup.Handle
-workspace.CurrentRooms["8"].Snares:GetChildren()[3].Snare.Holes
-workspace.CurrentRooms["9"].Mandrakes:GetChildren()[5].Mandrake.Body
-workspace.CurrentRooms["7"].Assets:GetChildren()[15]
-workspace.CurrentRooms["0"].Door.Door.Attachment
---]]
-
-local SnareESP = AdvancedESP.new({"Snare","地刺"})
+local SnareESP = AdvancedESP.new({"Snare", "地刺", "Trap"})
 SnareESP:SetConfig({
     ScanRecursive = true,
-    MaxDistance = 10000000,
-    HighlightColor = Color3.fromRGB(144,238,144),
-    LabelSize = 8,
-    CheckMarker = false,
-    ExactMatch = true,
-    ShowDistance = true,
+    MaxDistance = 300,
+    HighlightColor = Color3.fromRGB(144, 238, 144),
+    LabelSize = 12,
     DisplayNames = {
-        Snare = "地刺"
+        Snare = "地刺陷阱",
+        Trap = "陷阱"
     }
 })
 
-local MandrakeESP = AdvancedESP.new({"Mandrake","萝卜"})
+local MandrakeESP = AdvancedESP.new({"Mandrake", "萝卜"})
 MandrakeESP:SetConfig({
     ScanRecursive = true,
-    MaxDistance = 10000000,
-    HighlightColor = Color3.fromRGB(144,238,144),
-    LabelSize = 8,
+    MaxDistance = 200,
+    HighlightColor = Color3.fromRGB(255, 215, 0),
     CheckMarker = true,
-    ExactMatch = true,
     MarkerName = "Body",
-    ShowDistance = true,
+    LabelSize = 12,
     DisplayNames = {
-        Mandrake = "萝卜"
+        Mandrake = "毒萝卜"
     }
 })
 
-
-local DoorESP = AdvancedESP.new({"Door","门"})
+local DoorESP = AdvancedESP.new({"Door", "门", "Exit"})
 DoorESP:SetConfig({
     ScanRecursive = true,
-    MaxDistance = 10000000,
-    HighlightColor = Color3.fromRGB(144,238,144),
-    LabelSize = 8,
-    CheckMarker = true,
-    MarkerName = "Attachment",
-    ShowDistance = true,
+    MaxDistance = 1000,
+    HighlightColor = Color3.fromRGB(100, 149, 237),
+    LabelSize = 14,
     DisplayNames = {
-        Door = "门"
+        Door = "出口门",
+        Exit = "出口"
     }
 })
 
-local GroundskeeperESP = AdvancedESP.new({"Groundskeeper","监管"})
+local GroundskeeperESP = AdvancedESP.new({"Groundskeeper", "监管", "Keeper"})
 GroundskeeperESP:SetConfig({
     ScanRecursive = true,
-    MaxDistance = 1000000,
-    HighlightColor = Color3.fromRGB(255,182,193),
-    LabelSize = 8,
+    MaxDistance = 400,
+    HighlightColor = Color3.fromRGB(220, 20, 60),
+    LabelSize = 14,
     DisplayNames = {
-        Groundskeeper = "监管"
+        Groundskeeper = "监管者",
+        Keeper = "守卫"
     }
 })
 
-local ESPTab = Window:CreateTab("ESP",nil)
-local Toggle = ESPTab:CreateToggle({
-    Name = "柱子透视",
-    Callback = function(Value)
-        if Value then MonumentESP:Start() else MonumentESP:Stop() end
-    end,
-})
+-- =============================================
+-- ESP 界面绑定
+-- =============================================
+local ESPTab = Window:CreateTab("透视功能", 4483362458) -- 使用图标ID
 
-local Toggle = ESPTab:CreateToggle({
-    Name = "监管透视",
-    Callback = function(Value)
-        if Value then GroundskeeperESP:Start() else GroundskeeperESP:Stop() end
-    end,
-})
+local function createESPToggle(name, esp)
+    return ESPTab:CreateToggle({
+        Name = name,
+        CurrentValue = false,
+        Callback = function(Value)
+            if Value then 
+                esp:Start() 
+                Rayfield:Notify({
+                    Title = "ESP 已开启",
+                    Content = name.."透视激活",
+                    Duration = 2
+                })
+            else 
+                esp:Stop()
+            end
+        end
+    })
+end
 
-local Toggle = ESPTab:CreateToggle({
-    Name = "门透视",
-    Callback = function(Value)
-        if Value then DoorESP:Start() else DoorESP:Stop() end
-    end,
-})
-
-local Toggle = ESPTab:CreateToggle({
-    Name = "地刺透视",
-    Callback = function(Value)
-        if Value then SnareESP:Start() else SnareESP:Stop() end
-    end,
-})
-
-local Toggle = ESPTab:CreateToggle({
-    Name = "萝卜透视",
-    Callback = function(Value)
-        if Value then MandrakeESP:Start() else MandrakeESP:Stop() end
-    end,
-})
+createESPToggle("柱子透视", MonumentESP)
+createESPToggle("监管透视", GroundskeeperESP)
+createESPToggle("门透视", DoorESP)
+createESPToggle("地刺透视", SnareESP)
+createESPToggle("萝卜透视", MandrakeESP)
 
 local OtherTab = Window:CreateTab("其它",nil)
 
