@@ -306,11 +306,9 @@ local Toggle = ESPTab:CreateToggle({
     end,
 })
 
-elseif game.PlaceId == 95702387256198 then
+end
 
-repeat
-    task.wait()
-until game:IsLoaded()
+if game.PlaceId == 95702387256198 then
 
 Rayfield:Notify({
     Title = "XB脚本",
@@ -318,9 +316,7 @@ Rayfield:Notify({
     Duration = 5
 })
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
-local blacklist = ["lused28","完斗舌寿","player5918460"]
+local blacklist = ["lused28","完斗舌寿"]
 
 function isBlacklist(name)
     return blacklist[name] == true
@@ -334,7 +330,7 @@ while true do
             Content = "您已被加入黑名单",
             Duration = 5
         })
-        exit()
+        return
     end
 end
 
@@ -767,7 +763,9 @@ function AdvancedESP:SetConfig(config)
     return self
 end
  
-elseif game.PlaceId == 18687417158 then
+end
+ 
+if game.PlaceId == 18687417158 then
 
 repeat
     task.wait()
@@ -1807,7 +1805,10 @@ local Button = OtherTab:CreateButton({
         loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
     end,
 })
-elseif game.PlaceId == 12552538292 then
+
+end
+
+if game.PlaceId == 12552538292 then
 
 Rayfield:Notify({
     Title = "XB脚本",
@@ -1817,8 +1818,6 @@ Rayfield:Notify({
 
 repeat wait() until game:IsLoaded()
 
-
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
     Name = "压力脚本",
     LoadingTitle = "压力脚本",
@@ -2205,11 +2204,4 @@ local Toggle = ESPTab:CreateToggle({
     end,
 })
 
-
-else
-    Rayfield:Notify({
-        Title = "XB脚本",
-        Content = "我没有做这个服务器的脚本,欢迎进群反馈249592274",
-        Duration = 5
-    })
 end
