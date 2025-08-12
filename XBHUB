@@ -281,7 +281,7 @@ local MonumentESP = AdvancedESP.new({"MonumentEntity","柱子"})
 MonumentESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 100000,
-    HighlightColor = Color3.fromRGB(0,200,255),
+    HighlightColor = Color3.fromRGB(255,182,193),
     CheckMarker = false,
     LabelSize = 8,
     DisplayNames = {
@@ -289,20 +289,64 @@ MonumentESP:SetConfig({
     }
 })
 
---workspace.CurrentRooms["3"].Door.Door
+--[[
+workspace.CurrentRooms["3"].Door.Door
+workspace.CurrentRooms["3"].Groundskeeper
+workspace.CurrentRooms["3"].Mandrakes:GetChildren()[7].Mandrake
+workspace.CurrentRooms["3"].Snares:GetChildren()[6].Snare
+workspace.CurrentRooms["1"].Assets:GetChildren()[34].LotusPetalPickup.Handle
+--]]
 
---[[local DoorESP = AdvancedESP.new({"Door","门"})
+local DoorESP = AdvancedESP.new({"Door","门"})
 DoorESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 10000000,
-    HighlightColor = Color3.fromRGB(144,238,144)
+    HighlightColor = Color3.fromRGB(144,238,144),
+    LabelSize = 8,
+    DisplayName = {
+        Door = "门"
+    }
 })
---]]
+
+local GroundskeeperESP = AdvancedESP.new({"Groundskeeper","监管"})
+GroundskeeperESP:SetConfig({
+    ScanRecursive = true,
+    MaxDistance = 1000000,
+    HighlightColor = Color3.fromRGB(255,182,193),
+    LabelSize = 8,
+    DisplayName = {
+        Groundskeeper = "监管"
+    }
+})
+
 local ESPTab = Window:CreateTab("ESP",nil)
 local Toggle = ESPTab:CreateToggle({
     Name = "柱子透视",
     Callback = function(Value)
         if Value then MonumentESP:Start() else MonumentESP:Stop() end
+    end,
+})
+
+local OtherTab = Window:CreateTab("其它",nil)
+
+local Button = OtherTab:CreateButton({
+    Name = "Dex",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/main/dex.lua'))()
+    end,
+})
+
+local Button = OtherTab:CreateButton({
+    name = "Spy",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))()
+    end,
+})
+
+local Button = OtherTab:CreateButton({
+    Name = "IY",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
     end,
 })
 
