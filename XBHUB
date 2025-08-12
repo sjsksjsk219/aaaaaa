@@ -1,0 +1,1818 @@
+repeat
+    task.wait()
+until game:IsLoaded()
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+Rayfield:Notify({
+    Title = "XB脚本",
+    Content = "检测中......",
+    Duration = 3
+})
+
+if game.PlaceId == 6839171747 then
+
+Rayfield:Notify({
+    Title = "XB脚本",
+    Content = "检测到THE OUTDOORS,已自动开启脚本",
+    Duration = 5
+})
+
+local Window = Rayfield:CreateWindow({
+    Name = "THE OUTDOORS",
+    LoadingTitle = "XB脚本--THE OUTDOORS",
+    LoadingSubtitle = "by sjsksjsk",
+    ConfigurationSaving = {
+        Enabled = false,
+        FolderName = nil,
+        FileName = "脚本"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "discord.gg/Mspaint",
+        RememberJoins = true
+    },
+    KeySystem = false,
+    KeySettings = {
+        Title ="卡密系统",
+        Subtitle = "点击获取链接",
+        Note = "无",
+        FileName = "Link",
+        SaveKey = true,
+        GrabKeyFromSite = true,
+        Key = {"https://pastebin.com/raw/5a5zfWn7"}
+    }
+})
+
+Rayfield:Notify({
+    Title = "欢迎使用本脚本",
+    Content = "开的时候演都不要演",
+    Duration = 2,
+    Image = nil,
+    Actions = {
+        Ignore = {
+            Name = "好的",
+            Callback = function()
+                print("用户点了好的")
+            end,
+        },
+    },
+})
+
+
+local AdvancedESP = {}
+AdvancedESP.__index = AdvancedESP
+
+local DEFAULT_CONFIG = {
+    UpdateInterval = 1,
+    LoadWaitTime = 0.2,
+    HighlightColor = Color3.fromRGB(255, 0, 0),
+    LabelColor = Color3.fromRGB(255, 255, 255),
+    LabelSize = 14,
+    ShowDistance = true,
+    MaxDistance = 1000,
+    ExactMatch = false,
+    CheckMarker = false,
+    MarkerName = "",
+    SearchPath = "Workspace",
+    ScanRecursive = true,
+    DisplayNames = {},
+    ObjectColors = {}
+}
+
+function AdvancedESP.new(targetNames)
+    local self = setmetatable({}, AdvancedESP)
+    self.Config = table.clone(DEFAULT_CONFIG)
+    self.TargetNames = type(targetNames) == "table" and targetNames or {targetNames}
+    self.Active = false
+    self.Instances = {}
+    self.Connections = {}
+    return self
+end
+
+function AdvancedESP:_safeCall(func, ...)
+    local success, err = pcall(func, ...)
+    if not success then
+        warn("[ESP 错误]", err)
+        return false
+    end
+    return true
+end
+
+function AdvancedESP:_getFromPath(path)
+    local parts = string.split(path, ".")
+    local current = game
+    for _, part in ipairs(parts) do
+        if not current then return nil end
+        current = current:FindFirstChild(part)
+    end
+    return current
+end
+
+function AdvancedESP:_getDistance(obj)
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        return (char.HumanoidRootPart.Position - obj.Position).Magnitude
+    end
+    return math.huge
+end
+
+function AdvancedESP:_createESP(obj)
+    if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return false end
+    
+    local displayName = self.Config.DisplayNames[obj.Name] or obj.Name
+    local highlightColor = self.Config.ObjectColors[obj.Name] or self.Config.HighlightColor
+    
+    local marker = Instance.new("BoolValue")
+    marker.Name = "AdvancedESP_Marker"
+    marker.Parent = obj
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "AdvancedESP_Highlight"
+    highlight.Adornee = obj
+    highlight.FillTransparency = 0.7
+    highlight.OutlineTransparency = 0.2
+    highlight.FillColor = highlightColor
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.Parent = obj
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "AdvancedESP_Billboard"
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = obj
+    billboard.Parent = obj
+    
+    local label = Instance.new("TextLabel")
+    label.Text = displayName
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = self.Config.LabelSize
+    label.TextColor3 = self.Config.LabelColor
+    label.BackgroundTransparency = 1
+    label.TextStrokeTransparency = 0.5
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.Parent = billboard
+    
+    table.insert(self.Instances, {
+        Object = obj,
+        Marker = marker,
+        Highlight = highlight,
+        Billboard = billboard,
+        Label = label
+    })
+    
+    if self.Config.ShowDistance then
+        table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+            self:_safeCall(function()
+                if not obj or not obj.Parent then return end
+                
+                local dist = self:_getDistance(obj)
+                if dist <= self.Config.MaxDistance then
+                    label.Text = string.format("%s\n[%dm]", displayName, math.floor(dist))
+                    highlight.Enabled = true
+                    billboard.Enabled = true
+                else
+                    highlight.Enabled = false
+                    billboard.Enabled = false
+                end
+            end)
+        end))
+    end
+    
+    return true
+end
+
+function AdvancedESP:_isTarget(obj)
+    if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
+    
+    if self.Config.SearchPath ~= "Workspace" then
+        local targetPath = self:_getFromPath(self.Config.SearchPath)
+        if not targetPath or not obj:IsDescendantOf(targetPath) then
+            return false
+        end
+    end
+    
+    if #self.TargetNames == 0 then return true end
+    
+    local nameMatch = false
+    for _, name in ipairs(self.TargetNames) do
+        if self.Config.ExactMatch then
+            if obj.Name == name then nameMatch = true break end
+        else
+            if string.find(obj.Name:lower(), name:lower()) then nameMatch = true break end
+        end
+    end
+    
+    if nameMatch and self.Config.CheckMarker then
+        return obj:FindFirstChild(self.Config.MarkerName) ~= nil
+    end
+    
+    return nameMatch
+end
+
+function AdvancedESP:_scanAndAdd()
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    
+    local function scan(parent)
+        for _, obj in ipairs(parent:GetChildren()) do
+            if self:_isTarget(obj) then
+                self:_createESP(obj)
+            end
+            if self.Config.ScanRecursive then
+                scan(obj)
+            end
+        end
+    end
+    
+    self:_safeCall(scan, targetPath)
+end
+
+function AdvancedESP:Start()
+    if self.Active then return end
+    self.Active = true
+    
+    self:_scanAndAdd()
+    
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
+        if self:_isTarget(obj) then
+            task.wait(self.Config.LoadWaitTime)
+            self:_createESP(obj)
+        end
+    end))
+    
+    table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+        if os.clock() - (self._lastUpdate or 0) >= self.Config.UpdateInterval then
+            self:_scanAndAdd()
+            self._lastUpdate = os.clock()
+        end
+    end))
+end
+
+function AdvancedESP:Stop()
+    if not self.Active then return end
+    self.Active = false
+    
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
+    end
+    self.Connections = {}
+    
+    for _, data in ipairs(self.Instances) do
+        self:_safeCall(function()
+            data.Highlight:Destroy()
+            data.Billboard:Destroy()
+            data.Marker:Destroy()
+        end)
+    end
+    self.Instances = {}
+end
+
+function AdvancedESP:SetConfig(config)
+    for k, v in pairs(config) do
+        if self.Config[k] ~= nil then
+            self.Config[k] = v
+        end
+    end
+    return self
+end
+
+local MonumentESP = AdvancedESP.new({"MonumentEntity","柱子"})
+MonumentESP:SetConfig({
+    ScanRecursive = true,
+    MaxDistance = 100000,
+    HighlightColor = Color3.fromRGB(0,200,255),
+    CheckMarker = false,
+    LabelSize = 8,
+    DisplayNames = {
+        MonumentEntity = "柱子怪"
+    }
+})
+
+local DoorESP = AdvancedESP.new({"Door","门"})
+DoorESP:SetConfig({
+    ScanRecursive = true,
+    MaxDistance = 10000000,
+    HighlightColor = Color3.fromRGB(0,200,255)
+})
+
+local ESPTab = Window:CreateTab("ESP",nil)
+local Toggle = ESPTab:CreateToggle({
+    Name = "柱子透视",
+    Callback = function(Value)
+        if Value then MonumentESP:Start() else MonumentESP:Stop() end
+    end,
+})
+
+elseif game.PlaceId == 95702387256198 then
+
+repeat
+    task.wait()
+until game:IsLoaded()
+
+Rayfield:Notify({
+    Title = "XB脚本",
+    Content = "检测到偷一辆车,已自动开启脚本",
+    Duration = 5
+})
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local blacklist = ["lused28","完斗舌寿","player5918460"]
+
+function isBlacklist(name)
+    return blacklist[name] == true
+end
+
+while true do
+    local playerName = game.Player.LocalPlayer.Name
+    if isBlacklist[playerName] then
+        Rayfield:Notify({
+            Name = "XB脚本",
+            Content = "您已被加入黑名单",
+            Duration = 5
+        })
+        exit()
+    end
+end
+
+game.Players.PlayerAdded:Connect(function(player)
+    Rayfield:Notify({
+        Name = player .. " 加入了游戏",
+        Content = "当前玩家: " .. #game.Players:GetPlayers(),
+        Duration = 2,
+        Image = player.Character and player.Character:FindFirstChild("Head") or nil
+    })
+end)
+
+local Window = Rayfield:CreateWindow({
+    Name = "XB脚本",
+    LoadingTitle = "XB脚本",
+    LoadingSubtitle = "by sjsksjsk",
+    ConfigurationSaving = {
+        Enabled = false,
+        FolderName = nil,
+        FileName = "脚本"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "discord.gg/Mspaint",
+        RememberJoins = true
+    },
+    KeySystem = true,
+    KeySettings = {
+        Title ="卡密系统",
+        Subtitle = "点击获取链接",
+        Note = "无",
+        FileName = "Link",
+        SaveKey = true,
+        GrabKeyFromSite = true,
+        Key = {"https://pastebin.com/raw/5a5zfWn7"}
+    }
+})
+
+local MainTab = Window:CreateTab("主要",nil)
+
+local Input = MainTab:CreateInput({
+    Name = "刷钱等待时间",
+    RemoveTextAfterFocusLost = false,
+    PlaceholderText = "请输入",
+    Callback = function(Text)
+        _G.WaitTime = tonumber(Text) or 0
+    end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "自动刷钱",
+    Callback = function(Value)
+        if Value then
+            if _G.WaitTime then
+                while Value do
+                    for num = 1, 40 do
+                        local collect = "Earnings"..tostring(num)
+                        game:GetService("ReplicatedStorage").Remotes.Server.CollectEarnings:FireServer(collect)
+                        task.wait(_G.WaitTime)
+                    end
+                end
+            else
+                Rayfield:Notify({
+                    Title = "请先设置等待时间!",
+                    Duration = 5
+                })
+            end
+        end
+    end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "基地永久防御",
+    Callback = function(Value)
+        _G.DefenseLoop = Value
+        while _G.DefenseLoop do
+            game:GetService("ReplicatedStorage").Remotes.Server.LockGate:FireServer()
+            task.wait()
+        end
+    end,
+})
+
+local Button = MainTab:CreateButton({
+    Name = "基地召唤炮塔",
+    Callback = function()
+        game:GetService("ReplicatedStorage").Remotes.Server.PurchaseTurret:FireServer()
+    end,
+})
+
+-- workspace.Plots["2"].Turret 
+
+local Toggle = MainTab:CreateToggle({
+    Name = "删除所有车库屏障",
+    Callback = function(Value)
+        while Value do
+            local plots = game.Workspace.Plots
+            for _, part in ipairs(plots:GetChildren()) do
+                local barrier = part:FindFirstChild("Barrier")
+                if barrier then
+                    barrier:Destroy()
+                end
+            end
+            task.wait()
+        end       
+    end,                   
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "删除所有车库炮塔",
+    Callback = function(Value)
+        while true do
+            local plots = game.Workspace.Plots
+            for _, part in ipairs(plots:GetChildren()) do
+                local turrent = part:FindFirstChild("Turret")
+                if turrent then
+                    turrent:Destroy()
+                end
+            end
+            task.wait()
+        end
+    end,                   
+})
+
+local Tab = Window:CreateTab("基础功能",nil)
+
+Rayfield:Notify({
+    Title = "欢迎使用本脚本",
+    Content = "开的时候演都不要演",
+    Duration = 2,
+    Image = nil,
+    Actions = {
+        Ignore = {
+            Name = "好的",
+            Callback = function()
+                print("SB")
+            end
+        },
+    },
+})
+
+local Input = Tab:CreateInput({
+    Name = "速度调节",
+    PlaceholderText = "请输入速度",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local humanoid = game.Players.LocalPlayer.Character.Humanoid
+        local targetSpeed = (Text)
+        for i = humanoid.WalkSpeed, targetSpeed, 5 do
+            humanoid.WalkSpeed = i
+             task.wait(0.1)
+        end
+    end,
+})
+
+local Toggle = Tab:CreateToggle({
+    Name = "穿墙",
+    CurrentValue = false,
+    Flag = "无",
+    Callback = function(Value)
+        if Value then
+            _G.NoclipConnection = game:GetService("RunService").Stepped:Connect(function()
+                for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end)
+        else
+            if _G.NoclipConnection then
+                _G.NoclipConnection:Disconnect()
+            end
+        end
+    end,
+})
+
+local button = Tab:CreateButton({
+    Name = "Dex",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/main/dex.lua'))()
+    end,
+})
+
+local button = Tab:CreateButton({
+    Name = "Spy",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))()
+    end,
+})
+
+local button = Tab:CreateButton({
+    Name = "IY",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+    end,
+})
+
+local FunnyTab = Window:CreateTab("娱乐",nil)
+
+local Button = FunnyTab:CreateButton({
+    Name = "自动扣钱",
+    Callback = function()
+        while true do
+            game:GetService("ReplicatedStorage").Remotes.Server.PurchaseTurret:FireServer()
+            task.wait()
+        end
+    end,
+})
+
+local Button = FunnyTab:CreateButton({
+    Name  = "删除自己所有的车(客户端)",
+    Callback = function()  
+        local player = game.Players.LocalPlayer
+        local car = workspace.Temp:FindFirstChild(player.Name) and workspace.Temp[player.Name]:FindFirstChild("OwnedCars")
+        if car then
+           car:Destroy()
+        end
+    end,
+})
+
+local AdvancedESP = {}
+AdvancedESP.__index = AdvancedESP
+
+local DEFAULT_CONFIG = {
+    UpdateInterval = 2,              -- 更新间隔(秒)
+    LoadWaitTime = 0.3,             -- 对象加载等待时间
+    HighlightColor = Color3.fromRGB(0, 255, 0),  -- 高亮颜色
+    LabelColor = Color3.fromRGB(255, 255, 255),  -- 标签颜色
+    LabelSize = 18,                 -- 字体大小
+    ShowDistance = true,            -- 是否显示距离
+    MaxDistance = 200,              -- 最大显示距离
+    ExactMatch = true,              -- 是否精确匹配名称
+    CheckMarker = false,            -- 是否检测标志物
+    MarkerName = "IsTarget",        -- 标志物名称
+    SearchPath = "Workspace",       -- 默认搜索路径
+    ScanRecursive = true            -- 是否递归搜索子目录
+}
+
+function AdvancedESP.new(targetNames)
+    local self = setmetatable({}, AdvancedESP)
+    self.Config = table.clone(DEFAULT_CONFIG)
+    self.TargetNames = type(targetNames) == "table" and targetNames or {targetNames}
+    self.Active = false
+    self.Instances = {}
+    self.Connections = {}
+    return self
+end
+
+function AdvancedESP:_safeCall(func, ...)
+    local success, err = pcall(func, ...)
+    if not success then warn("ESP Error:", err) end
+end
+
+function AdvancedESP:_getFromPath(path)
+    local parts = string.split(path, ".")
+    local current = game
+    for _, part in ipairs(parts) do
+        if not current then return nil end
+        current = current:FindFirstChild(part)
+    end
+    return current
+end
+
+function AdvancedESP:_getDistance(obj)
+    local char = game:GetService("Players").LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        return (char.HumanoidRootPart.Position - obj.Position).Magnitude
+    end
+    return math.huge
+end
+
+function AdvancedESP:_createESP(obj)
+    if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return end
+
+    local marker = Instance.new("BoolValue")
+    marker.Name = "AdvancedESP_Marker"
+    marker.Parent = obj
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "AdvancedESP_Highlight"
+    highlight.Adornee = obj
+    highlight.FillTransparency = 0.6
+    highlight.OutlineTransparency = 0.3
+    highlight.FillColor = self.Config.HighlightColor
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.Parent = obj
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "AdvancedESP_Billboard"
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = obj
+    billboard.Parent = obj
+
+    local label = Instance.new("TextLabel")
+    label.Text = obj.Name
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = self.Config.LabelSize
+    label.TextColor3 = self.Config.LabelColor
+    label.BackgroundTransparency = 1
+    label.TextStrokeTransparency = 0
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.Parent = billboard
+    table.insert(self.Instances, {
+        Object = obj,
+        Marker = marker,
+        Highlight = highlight,
+        Billboard = billboard,
+        Label = label
+    })
+    if self.Config.ShowDistance then
+        table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+            self:_safeCall(function()
+                local dist = self:_getDistance(obj)
+                if dist <= self.Config.MaxDistance then
+                    label.Text = string.format("%s\n[%dm]", obj.Name, math.floor(dist))
+                    billboard.Enabled = true
+                    highlight.Enabled = true
+                else
+                    billboard.Enabled = false
+                    highlight.Enabled = false
+                end
+            end)
+        end))
+    end
+end
+
+function AdvancedESP:_isTarget(obj)
+    if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
+    
+    if self.Config.SearchPath ~= "Workspace" then
+        local targetPath = self:_getFromPath(self.Config.SearchPath)
+        if not targetPath or not obj:IsDescendantOf(targetPath) then
+            return false
+        end
+    end
+    
+    local nameMatch = false
+    for _, name in ipairs(self.TargetNames) do
+        if self.Config.ExactMatch then
+            if obj.Name == name then nameMatch = true break end
+        else
+            if string.find(obj.Name, name) then nameMatch = true break end
+        end
+    end
+    if nameMatch and self.Config.CheckMarker then
+        return obj:FindFirstChild(self.Config.MarkerName) ~= nil
+    end
+    
+    return nameMatch
+end
+
+function AdvancedESP:_scanAndAdd()
+    local startTime = os.clock()
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    
+    local function scan(parent)
+        for _, obj in ipairs(parent:GetChildren()) do
+            if os.clock() - startTime > 0.05 then
+                task.wait()
+                startTime = os.clock()
+            end
+            if self:_isTarget(obj) then
+                self:_createESP(obj)
+            end
+            if self.Config.ScanRecursive then
+                scan(obj)
+            end
+        end
+    end
+    
+    self:_safeCall(scan, targetPath)
+end
+
+function AdvancedESP:Start()
+    if self.Active then return end
+    self.Active = true
+    self:_scanAndAdd()
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
+        if self:_isTarget(obj) then
+            task.wait(self.Config.LoadWaitTime)
+            self:_createESP(obj)
+        end
+    end))
+    table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+        if os.clock() - (self._lastUpdate or 0) > self.Config.UpdateInterval then
+            self:_scanAndAdd()
+            self._lastUpdate = os.clock()
+        end
+    end))
+end
+
+function AdvancedESP:Stop()
+    if not self.Active then return end
+    self.Active = false
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
+    end
+    self.Connections = {}
+    for _, data in ipairs(self.Instances) do
+        self:_safeCall(function()
+            data.Highlight:Destroy()
+            data.Billboard:Destroy()
+            data.Marker:Destroy()
+        end)
+    end
+    self.Instances = {}
+end
+
+function AdvancedESP:SetConfig(config)
+    for k, v in pairs(config) do
+        if self.Config[k] ~= nil then
+            if k == "SearchPath" and v ~= self.Config.SearchPath then
+                if self:_getFromPath(v) then
+                    self.Config[k] = v
+                    if self.Active then
+                        self:Stop()
+                        self:Start()
+                    end
+                else
+                    warn("路径无效:", v)
+                end
+            else
+                self.Config[k] = v
+            end
+        end
+    end
+    return self
+end
+ 
+elseif game.PlaceId == 12345678 then
+
+repeat
+    task.wait()
+until game:IsLoaded()
+
+Rayfield:Notify({
+    Title = "XB脚本",
+    Content = "检测到被遗弃,已自动开启脚本",
+    Duration = 5
+})
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "被遗弃",
+    LoadingTitle = "XB脚本--被遗弃",
+    LoadingSubtitle = "by sjsksjsk",
+    ConfigurationSaving = {
+        Enabled = false,
+        FolderName = nil,
+        FileName = "脚本"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "discord.gg/Mspaint",
+        RememberJoins = true
+    },
+    KeySystem = false,
+    KeySettings = {
+        Title ="卡密系统",
+        Subtitle = "点击获取链接",
+        Note = "无",
+        FileName = "Link",
+        SaveKey = true,
+        GrabKeyFromSite = true,
+        Key = {"https://pastebin.com/raw/5a5zfWn7"}
+    }
+})
+
+Rayfield:Notify({
+    Title = "欢迎使用本脚本",
+    Content = "开的时候演都不要演",
+    Duration = 2,
+    Image = nil,
+    Actions = {
+        Ignore = {
+            Name = "好的",
+            Callback = function()
+                print("用户点了好的")
+            end
+        },
+    },
+})
+
+local MainTab = Window:CreateTab("主要",nil)
+
+local Toggle = MainTab:CreateToggle({
+    Name = "防挂机被踢",
+    Callback = function(Value)
+        if Value then
+            Rayfield:Notify({
+                Title = "防挂机被踢",
+                Content = "已开启防挂机!",
+                Duration = 2,
+                Image = nil
+            })
+            while Value do
+                game:GetService("Players").LocalPlayer.PlayerData.Settings.Game.AFK.Value = false
+                task.wait()
+            end
+        else
+            Rayfield:Notify({
+                Title = "防挂机被踢",
+                Content = "已关闭防挂机!",
+                Duration = 2,
+                Image = nil
+            })
+        end
+    end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "开启Debug模式",
+    Callback = function(Value)
+        if Value then
+            game:GetService("Players").LocalPlayer.PlayerData.Settings.Advanced.DebugMode.Value = true
+            Rayfield:Notify({
+                Title = "Debug",
+                Content = "已开启Debug模式!",
+                Duration = 2,
+                Image = nil
+            })
+        else
+            game:GetService("Players").LocalPlayer.PlayerData.Settings.Advanced.DebugMode.Value = false
+            Rayfield:Notify({
+                Title = "Debug",
+                Content = "已关闭Debug模式!",
+                Duration = 2,
+                Image = nil
+            })
+        end
+    end,
+})
+
+local Input = MainTab:CreateInput({
+    Name = "修机延迟",
+    PlaceholderText = "请输入",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Value)
+        if Value then
+           _G.WaitTime = tonumber(Value)
+        else
+            Rayfield:Notify({
+                Title = "修机",
+                Content = "请输入延迟!",
+                Duration = 2,
+                Image = nil
+            })
+        end
+    end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "自动修电机",
+    Callback = function(Value)
+        if Value then
+            if _G.WaitTime then
+                local thread
+                thread = task.spawn(function()
+                    while Value do
+                        local closestGenerator = nil
+                        local closestDistance = math.huge
+                        local playerPos = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
+                        
+                        for _, generator in pairs(workspace.Map.Ingame.Map:GetChildren()) do
+                            if generator:FindFirstChild("Main") then
+                                local distance = (generator.Main.Position - playerPos).Magnitude
+                                if distance < closestDistance then
+                                    closestDistance = distance
+                                    closestGenerator = generator
+                                end
+                            end
+                        end
+                        
+                        if closestGenerator and closestGenerator:FindFirstChild("Progress") then
+                            if closestGenerator.Progress.Value < 100 then
+                                closestGenerator.Progress.Value = closestGenerator.Progress.Value + 26
+                                if closestGenerator.Progress.Value > 100 then
+                                    closestGenerator.Progress.Value = 100
+                                end
+                            end
+                            workspace.Map.Ingame.Map.Generator.Remotes.RE:FireServer()
+                        end
+                        task.wait(_G.WaitTime)
+                    end
+                end)
+                
+                task.spawn(function()
+                    while Value do task.wait() end
+                    if thread then task.cancel(thread) end
+                end)
+            end
+            Rayfield:Notify({
+                Title = "自动修电机",
+                Content = "靠近电机自动维修!",
+                Image = nil
+            })
+        else
+            Rayfield:Notify({
+                Title = "自动修电机",
+                Content = "已关闭自动修电机!",
+                Duration = 2,
+                Image = nil
+            })
+        end
+    end,
+})
+
+local Toggle = MainTab:CreateToggle({
+    Name = "无限体力",
+    Callback = function(Value)
+        if Value then
+            local player = game.Players.LocalPlayer
+            local staminaThread
+            
+            local function findAndModifyStamina()
+                while Value do
+                    local character = player.Character
+                    if character and character:FindFirstChild("HumanoidRootPart") then
+                        for _, survivor in pairs(workspace.Players.Survivors:GetChildren()) do
+                            if survivor.Name == player.Name then
+                                if survivor:FindFirstChild("SpeedMultipliers") then
+                                    local speedMultipliers = survivor.SpeedMultipliers
+                                    if speedMultipliers:FindFirstChild("Sprinting") then
+                                        speedMultipliers.Sprinting.Value = 2.17
+                                    end
+                                end
+                                break
+                            end
+                        end
+                    end
+                    task.wait(0.5)
+                end
+            end
+            
+            staminaThread = task.spawn(findAndModifyStamina)
+            
+            task.spawn(function()
+                while Value do task.wait() end
+                if staminaThread then
+                    task.cancel(staminaThread)
+                end
+            end)
+            
+            Rayfield:Notify({
+                Title = "无限体力",
+                Content = "已开启无限体力!",
+                Duration = 2,
+                Image = nil
+            })
+        else
+            Rayfield:Notify({
+                Title = "无限体力",
+                Content = "已关闭无限体力!",
+                Duration = 2,
+                Image = nil
+            })
+        end
+    end
+})
+
+--[[
+local AdvancedESP = {}
+AdvancedESP.__index = AdvancedESP
+
+local DEFAULT_CONFIG = {
+    UpdateInterval = 1,
+    LoadWaitTime = 0.2,
+    HighlightColor = Color3.fromRGB(255, 0, 0),
+    LabelColor = Color3.fromRGB(255, 255, 255),
+    LabelSize = 14,
+    ShowDistance = true,
+    MaxDistance = 1000,
+    ExactMatch = false,
+    CheckMarker = false,
+    MarkerName = "",
+    SearchPath = "Workspace",
+    ScanRecursive = true,
+    DisplayNames = {},
+    ObjectColors = {}
+}
+
+function AdvancedESP.new(targetNames)
+    local self = setmetatable({}, AdvancedESP)
+    self.Config = table.clone(DEFAULT_CONFIG)
+    self.TargetNames = type(targetNames) == "table" and targetNames or {targetNames}
+    self.Active = false
+    self.Instances = {}
+    self.Connections = {}
+    return self
+end
+
+function AdvancedESP:_safeCall(func, ...)
+    local success, err = pcall(func, ...)
+    if not success then
+        warn("[ESP 错误]", err)
+        return false
+    end
+    return true
+end
+
+function AdvancedESP:_getFromPath(path)
+    local parts = string.split(path, ".")
+    local current = game
+    for _, part in ipairs(parts) do
+        if not current then return nil end
+        current = current:FindFirstChild(part)
+    end
+    return current
+end
+
+function AdvancedESP:_getDistance(obj)
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        return (char.HumanoidRootPart.Position - obj.Position).Magnitude
+    end
+    return math.huge
+end
+
+function AdvancedESP:_createESP(obj)
+    if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return false end
+    
+    local displayName = "杀手"
+    local highlightColor = self.Config.HighlightColor
+    
+    local marker = Instance.new("BoolValue")
+    marker.Name = "AdvancedESP_Marker"
+    marker.Parent = obj
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "AdvancedESP_Highlight"
+    highlight.Adornee = obj
+    highlight.FillTransparency = 0.7
+    highlight.OutlineTransparency = 0.2
+    highlight.FillColor = highlightColor
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.Parent = obj
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "AdvancedESP_Billboard"
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = obj
+    billboard.Parent = obj
+    
+    local label = Instance.new("TextLabel")
+    label.Text = displayName
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = self.Config.LabelSize
+    label.TextColor3 = self.Config.LabelColor
+    label.BackgroundTransparency = 1
+    label.TextStrokeTransparency = 0.5
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.Parent = billboard
+    
+    table.insert(self.Instances, {
+        Object = obj,
+        Marker = marker,
+        Highlight = highlight,
+        Billboard = billboard,
+        Label = label
+    })
+    
+    if self.Config.ShowDistance then
+        table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+            self:_safeCall(function()
+                if not obj or not obj.Parent then return end
+                
+                local dist = self:_getDistance(obj)
+                if dist <= self.Config.MaxDistance then
+                    label.Text = string.format("%s\n[%dm]", displayName, math.floor(dist))
+                    highlight.Enabled = true
+                    billboard.Enabled = true
+                else
+                    highlight.Enabled = false
+                    billboard.Enabled = false
+                end
+            end)
+        end))
+    end
+    
+    return true
+end
+
+function AdvancedESP:_isTarget(obj)
+    if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
+    
+    if self.Config.SearchPath ~= "Workspace" then
+        local targetPath = self:_getFromPath(self.Config.SearchPath)
+        if not targetPath or not obj:IsDescendantOf(targetPath) then
+            return false
+        end
+    end
+    
+    return true
+end
+
+function AdvancedESP:_scanAndAdd()
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    
+    local function scan(parent)
+        for _, obj in ipairs(parent:GetChildren()) do
+            if self:_isTarget(obj) then
+                self:_createESP(obj)
+            end
+            if self.Config.ScanRecursive then
+                scan(obj)
+            end
+        end
+    end
+    
+    self:_safeCall(scan, targetPath)
+end
+
+function AdvancedESP:Start()
+    if self.Active then return end
+    self.Active = true
+    
+    self:_scanAndAdd()
+    
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
+        if self:_isTarget(obj) then
+            task.wait(self.Config.LoadWaitTime)
+            self:_createESP(obj)
+        end
+    end))
+    table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+        if os.clock() - (self._lastUpdate or 0) >= self.Config.UpdateInterval then
+            self:_scanAndAdd()
+            self._lastUpdate = os.clock()
+        end
+    end))
+end
+
+function AdvancedESP:Stop()
+    if not self.Active then return end
+    self.Active = false
+    
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
+    end
+    self.Connections = {}
+    
+    for _, data in ipairs(self.Instances) do
+        self:_safeCall(function()
+            data.Highlight:Destroy()
+            data.Billboard:Destroy()
+            data.Marker:Destroy()
+        end)
+    end
+    self.Instances = {}
+end
+
+function AdvancedESP:SetConfig(config)
+    for k, v in pairs(config) do
+        if self.Config[k] ~= nil then
+            self.Config[k] = v
+        end
+    end
+    return self
+end
+
+local MainESP = AdvancedESP.new({"Main","Generator"})
+
+MainESP:SetConfig({
+    SearchPath = "Workspace.Map.Ingame.Map",
+    ScanRecursive = true,
+    MaxDistance = 100000,
+    HighlightColor = Color3.fromRGB(0,200,255),
+    CheckMarker = true,
+    MarkerName = "Prompt",
+    LabelSize = 8,
+    DisplayNames = {
+        Main = "发电机",
+        Generator = "发电机(可维修)"
+    },
+    ObjectColors = {
+        Main = Color3.fromRGB(0,200,255),
+        Generator = Color3.fromRGB(255,200,100)
+    }
+})
+
+local KillerESP = AdvancedESP.new({})
+KillerESP:SetConfig({
+    SearchPath = "Workspace.Players.Killers",
+    HighlightColor = Color3.fromRGB(255, 0, 0)
+})
+
+local ESPTab = Window:CreateTab("ESP",nil)
+
+local Toggle = ESPTab:CreateToggle({
+    Name = "发电机透视",
+    Callback = function(Value)
+        if Value then MainESP:Start() else MainESP:Stop() end
+    end,
+})
+
+local Toggle = ESPTab:CreateToggle({
+    Name = "杀手透视",
+    Callback = function(Value)
+        if Value then KillerESP:Start() else KillerESP:Stop() end
+    end,
+})
+--]]
+--[[
+local AdvancedESP = {}
+AdvancedESP.__index = AdvancedESP
+
+local DEFAULT_CONFIG = {
+    UpdateInterval = 1,
+    LoadWaitTime = 0.2,
+    HighlightColor = Color3.fromRGB(255, 0, 0),
+    LabelColor = Color3.fromRGB(255, 255, 255),
+    LabelSize = 14,
+    ShowDistance = true,
+    MaxDistance = 1000,
+    ExactMatch = false,
+    CheckMarker = false,
+    MarkerName = "",
+    SearchPath = "Workspace",
+    ScanRecursive = true,
+    DisplayNames = {},
+    ObjectColors = {}
+}
+
+function AdvancedESP.new(targetNames)
+    local self = setmetatable({}, AdvancedESP)
+    self.Config = table.clone(DEFAULT_CONFIG)
+    self.TargetNames = type(targetNames) == "table" and targetNames or {targetNames}
+    self.Active = false
+    self.Instances = {}
+    self.Connections = {}
+    return self
+end
+
+function AdvancedESP:_safeCall(func, ...)
+    local success, err = pcall(func, ...)
+    if not success then
+        warn("[ESP 错误]", err)
+        return false
+    end
+    return true
+end
+
+function AdvancedESP:_getFromPath(path)
+    local parts = string.split(path, ".")
+    local current = game
+    for _, part in ipairs(parts) do
+        if not current then return nil end
+        current = current:FindFirstChild(part)
+    end
+    return current
+end
+
+function AdvancedESP:_getDistance(obj)
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        return (char.HumanoidRootPart.Position - obj.Position).Magnitude
+    end
+    return math.huge
+end
+
+function AdvancedESP:_createESP(obj, displayName, highlightColor)
+    if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return false end
+    
+    local marker = Instance.new("BoolValue")
+    marker.Name = "AdvancedESP_Marker"
+    marker.Parent = obj
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "AdvancedESP_Highlight"
+    highlight.Adornee = obj
+    highlight.FillTransparency = 0.7
+    highlight.OutlineTransparency = 0.2
+    highlight.FillColor = highlightColor or self.Config.HighlightColor
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.Parent = obj
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "AdvancedESP_Billboard"
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = obj
+    billboard.Parent = obj
+    
+    local label = Instance.new("TextLabel")
+    label.Text = displayName or obj.Name
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = self.Config.LabelSize
+    label.TextColor3 = self.Config.LabelColor
+    label.BackgroundTransparency = 1
+    label.TextStrokeTransparency = 0.5
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.Parent = billboard
+    
+    table.insert(self.Instances, {
+        Object = obj,
+        Marker = marker,
+        Highlight = highlight,
+        Billboard = billboard,
+        Label = label
+    })
+    
+    if self.Config.ShowDistance then
+        table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+            self:_safeCall(function()
+                if not obj or not obj.Parent then return end
+                
+                local dist = self:_getDistance(obj)
+                if dist <= self.Config.MaxDistance then
+                    label.Text = string.format("%s\n[%dm]", displayName or obj.Name, math.floor(dist))
+                    highlight.Enabled = true
+                    billboard.Enabled = true
+                else
+                    highlight.Enabled = false
+                    billboard.Enabled = false
+                end
+            end)
+        end))
+    end
+    
+    return true
+end
+
+function AdvancedESP:_isTarget(obj)
+    if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
+    
+    if self.Config.SearchPath ~= "Workspace" then
+        local targetPath = self:_getFromPath(self.Config.SearchPath)
+        if not targetPath or not obj:IsDescendantOf(targetPath) then
+            return false
+        end
+    end
+    
+    if #self.TargetNames == 0 then return true end
+    
+    local nameMatch = false
+    for _, name in ipairs(self.TargetNames) do
+        if self.Config.ExactMatch then
+            if obj.Name == name then nameMatch = true break end
+        else
+            if string.find(obj.Name:lower(), name:lower()) then nameMatch = true break end
+        end
+    end
+    
+    if nameMatch and self.Config.CheckMarker then
+        return obj:FindFirstChild(self.Config.MarkerName) ~= nil
+    end
+    
+    return nameMatch
+end
+
+function AdvancedESP:_scanAndAdd()
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    
+    local function scan(parent)
+        for _, obj in ipairs(parent:GetChildren()) do
+            if self:_isTarget(obj) then
+                local displayName = self.Config.DisplayNames[obj.Name] or obj.Name
+                local color = self.Config.ObjectColors[obj.Name] or self.Config.HighlightColor
+                self:_createESP(obj, displayName, color)
+            end
+            if self.Config.ScanRecursive then
+                scan(obj)
+            end
+        end
+    end
+    
+    self:_safeCall(scan, targetPath)
+end
+
+function AdvancedESP:Start()
+    if self.Active then return end
+    self.Active = true
+    
+    self:_scanAndAdd()
+    
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
+        if self:_isTarget(obj) then
+            task.wait(self.Config.LoadWaitTime)
+            local displayName = self.Config.DisplayNames[obj.Name] or obj.Name
+            local color = self.Config.ObjectColors[obj.Name] or self.Config.HighlightColor
+            self:_createESP(obj, displayName, color)
+        end
+    end))
+    
+    -- 优化性能：降低更新频率
+    table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+        if os.clock() - (self._lastUpdate or 0) >= self.Config.UpdateInterval then
+            self:_scanAndAdd()
+            self._lastUpdate = os.clock()
+        end
+    end))
+end
+
+function AdvancedESP:Stop()
+    if not self.Active then return end
+    self.Active = false
+    
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
+    end
+    self.Connections = {}
+    
+    for _, data in ipairs(self.Instances) do
+        self:_safeCall(function()
+            data.Highlight:Destroy()
+            data.Billboard:Destroy()
+            data.Marker:Destroy()
+        end)
+    end
+    self.Instances = {}
+end
+
+function AdvancedESP:SetConfig(config)
+    for k, v in pairs(config) do
+        if self.Config[k] ~= nil then
+            self.Config[k] = v
+        end
+    end
+    return self
+end
+
+local GeneratorESP = AdvancedESP.new({"Main","Generator"})
+GeneratorESP:SetConfig({
+    SearchPath = "Workspace.Map.Ingame.Map",
+    ScanRecursive = true,
+    MaxDistance = 1000,
+    HighlightColor = Color3.fromRGB(0,200,255),
+    CheckMarker = true,
+    MarkerName = "Prompt",
+    LabelSize = 12,
+    DisplayNames = {
+        Main = "发电机",
+        Generator = "发电机(可维修)"
+    },
+    ObjectColors = {
+        Main = Color3.fromRGB(0,200,255),
+        Generator = Color3.fromRGB(255,200,100)
+    }
+})
+
+local KillerESP = AdvancedESP.new({})
+KillerESP:SetConfig({
+    SearchPath = "Workspace.Players.Killers",
+    HighlightColor = Color3.fromRGB(255, 0, 0),
+    DisplayNames = {
+        [""] = "杀手"
+    },
+    LabelSize = 14,
+    MaxDistance = 500
+})
+
+local ESPTab = Window:CreateTab("ESP",nil)
+
+local GeneratorToggle = ESPTab:CreateToggle({
+    Name = "发电机透视",
+    Callback = function(Value)
+        if Value then 
+            GeneratorESP:Start() 
+        else 
+            GeneratorESP:Stop() 
+        end
+    end,
+})
+
+local KillerToggle = ESPTab:CreateToggle({
+    Name = "杀手透视",
+    Callback = function(Value)
+        if Value then 
+            KillerESP:Start() 
+        else 
+            KillerESP:Stop() 
+        end
+    end,
+})
+--]]
+
+local AdvancedESP = {}
+AdvancedESP.__index = AdvancedESP
+
+local DEFAULT_CONFIG = {
+    UpdateInterval = 1,
+    LoadWaitTime = 0.2,
+    HighlightColor = Color3.fromRGB(255, 0, 0),
+    LabelColor = Color3.fromRGB(255, 255, 255),
+    LabelSize = 14,
+    ShowDistance = true,
+    MaxDistance = 1000,
+    ExactMatch = false,
+    CheckMarker = false,
+    MarkerName = "",
+    SearchPath = "Workspace",
+    ScanRecursive = true,
+    DisplayNames = {},
+    ObjectColors = {}
+}
+
+function AdvancedESP.new(targetNames)
+    local self = setmetatable({}, AdvancedESP)
+    self.Config = table.clone(DEFAULT_CONFIG)
+    self.TargetNames = type(targetNames) == "table" and targetNames or {targetNames}
+    self.Active = false
+    self.Instances = {}
+    self.Connections = {}
+    return self
+end
+
+function AdvancedESP:_safeCall(func, ...)
+    local success, err = pcall(func, ...)
+    if not success then
+        warn("[ESP 错误]", err)
+        return false
+    end
+    return true
+end
+
+function AdvancedESP:_getFromPath(path)
+    local parts = string.split(path, ".")
+    local current = game
+    for _, part in ipairs(parts) do
+        if not current then return nil end
+        current = current:FindFirstChild(part)
+    end
+    return current
+end
+
+function AdvancedESP:_getDistance(obj)
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        return (char.HumanoidRootPart.Position - obj.Position).Magnitude
+    end
+    return math.huge
+end
+
+function AdvancedESP:_createESP(obj)
+    if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return false end
+    
+    local displayName = self.Config.DisplayNames[obj.Name] or obj.Name
+    local highlightColor = self.Config.ObjectColors[obj.Name] or self.Config.HighlightColor
+    
+    local marker = Instance.new("BoolValue")
+    marker.Name = "AdvancedESP_Marker"
+    marker.Parent = obj
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "AdvancedESP_Highlight"
+    highlight.Adornee = obj
+    highlight.FillTransparency = 0.7
+    highlight.OutlineTransparency = 0.2
+    highlight.FillColor = highlightColor
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.Parent = obj
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "AdvancedESP_Billboard"
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = obj
+    billboard.Parent = obj
+    
+    local label = Instance.new("TextLabel")
+    label.Text = displayName
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = self.Config.LabelSize
+    label.TextColor3 = self.Config.LabelColor
+    label.BackgroundTransparency = 1
+    label.TextStrokeTransparency = 0.5
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.Parent = billboard
+    
+    table.insert(self.Instances, {
+        Object = obj,
+        Marker = marker,
+        Highlight = highlight,
+        Billboard = billboard,
+        Label = label
+    })
+    
+    if self.Config.ShowDistance then
+        table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+            self:_safeCall(function()
+                if not obj or not obj.Parent then return end
+                
+                local dist = self:_getDistance(obj)
+                if dist <= self.Config.MaxDistance then
+                    label.Text = string.format("%s\n[%dm]", displayName, math.floor(dist))
+                    highlight.Enabled = true
+                    billboard.Enabled = true
+                else
+                    highlight.Enabled = false
+                    billboard.Enabled = false
+                end
+            end)
+        end))
+    end
+    
+    return true
+end
+
+function AdvancedESP:_isTarget(obj)
+    if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
+    
+    if self.Config.SearchPath ~= "Workspace" then
+        local targetPath = self:_getFromPath(self.Config.SearchPath)
+        if not targetPath or not obj:IsDescendantOf(targetPath) then
+            return false
+        end
+    end
+    
+    if #self.TargetNames == 0 then return true end
+    
+    local nameMatch = false
+    for _, name in ipairs(self.TargetNames) do
+        if self.Config.ExactMatch then
+            if obj.Name == name then nameMatch = true break end
+        else
+            if string.find(obj.Name:lower(), name:lower()) then nameMatch = true break end
+        end
+    end
+    
+    if nameMatch and self.Config.CheckMarker then
+        return obj:FindFirstChild(self.Config.MarkerName) ~= nil
+    end
+    
+    return nameMatch
+end
+
+function AdvancedESP:_scanAndAdd()
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    
+    local function scan(parent)
+        for _, obj in ipairs(parent:GetChildren()) do
+            if self:_isTarget(obj) then
+                self:_createESP(obj)
+            end
+            if self.Config.ScanRecursive then
+                scan(obj)
+            end
+        end
+    end
+    
+    self:_safeCall(scan, targetPath)
+end
+
+function AdvancedESP:Start()
+    if self.Active then return end
+    self.Active = true
+    
+    self:_scanAndAdd()
+    
+    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+    table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
+        if self:_isTarget(obj) then
+            task.wait(self.Config.LoadWaitTime)
+            self:_createESP(obj)
+        end
+    end))
+    
+    table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
+        if os.clock() - (self._lastUpdate or 0) >= self.Config.UpdateInterval then
+            self:_scanAndAdd()
+            self._lastUpdate = os.clock()
+        end
+    end))
+end
+
+function AdvancedESP:Stop()
+    if not self.Active then return end
+    self.Active = false
+    
+    for _, conn in ipairs(self.Connections) do
+        conn:Disconnect()
+    end
+    self.Connections = {}
+    
+    for _, data in ipairs(self.Instances) do
+        self:_safeCall(function()
+            data.Highlight:Destroy()
+            data.Billboard:Destroy()
+            data.Marker:Destroy()
+        end)
+    end
+    self.Instances = {}
+end
+
+function AdvancedESP:SetConfig(config)
+    for k, v in pairs(config) do
+        if self.Config[k] ~= nil then
+            self.Config[k] = v
+        end
+    end
+    return self
+end
+
+local MainESP = AdvancedESP.new({"Main","Generator"})
+MainESP:SetConfig({
+    SearchPath = "Workspace.Map.Ingame.Map",
+    ScanRecursive = true,
+    MaxDistance = 100000,
+    HighlightColor = Color3.fromRGB(0,200,255),
+    CheckMarker = true,
+    MarkerName = "Prompt",
+    LabelSize = 8,
+    DisplayNames = {
+        Main = "发电机",
+        Generator = "发电机(可维修)"
+    },
+    ObjectColors = {
+        Main = Color3.fromRGB(0,200,255),
+        Generator = Color3.fromRGB(255,200,100)
+    }
+})
+
+local KillerESP = AdvancedESP.new({})
+KillerESP:SetConfig({
+    SearchPath = "Workspace.Players.Killers",
+    HighlightColor = Color3.fromRGB(255, 0, 0),
+    DisplayNames = {
+        [""] = "杀手"
+    },
+    ScanRecursive = false
+})
+
+local ESPTab = Window:CreateTab("ESP",nil)
+
+local Toggle = ESPTab:CreateToggle({
+    Name = "发电机透视",
+    Callback = function(Value)
+        if Value then MainESP:Start() else MainESP:Stop() end
+    end,
+})
+
+local Toggle = ESPTab:CreateToggle({
+    Name = "杀手透视",
+    Callback = function(Value)
+        if Value then KillerESP:Start() else KillerESP:Stop() end
+    end,
+})
+
+local OtherTab = Window:CreateTab("其他",nil)
+
+local Button = OtherTab:CreateButton({
+    Name = "Dex",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/main/dex.lua'))()
+    end,
+})
+
+local Button = OtherTab:CreateButton({
+    Name = "Spy",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))()
+    end,
+})
+
+local Button = OtherTab:CreateButton({
+    Name = "IY",
+    Callback = function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+    end,
+})
+
+else
+    Rayfield:Notify({
+        Title = "XB脚本",
+        Content = "我没有做这个服务器的脚本,欢迎进群反馈249592274",
+        Duration = 5
+    })
+end
