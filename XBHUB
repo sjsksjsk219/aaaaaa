@@ -67,7 +67,7 @@ local Slider = MainTab:CreateSlider({
    CurrentValue = 1,
    Flag = nil, -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
    Callback = function(Value)
-       Workspace.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value * 4 
+       game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value * 4 
    end,
 })
 
