@@ -1,4 +1,4 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfieldb'))()
 
 Rayfield:Notify({
     Title = "XB脚本",
@@ -618,28 +618,26 @@ end
 -- =============================================
 -- Doors 专用 ESP 配置
 -- =============================================
-local MonumentESP = AdvancedESP.new({"MonumentEntity", "柱子", "Monster"})
+local MonumentESP = AdvancedESP.new({"MonumentEntity", "柱子"})
 MonumentESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 500,
     HighlightColor = Color3.fromRGB(255, 182, 193),
-    LabelSize = 12,
+    LabelSize = 8,
     ShowDistance = true,
     DisplayNames = {
-        MonumentEntity = "柱子怪",
-        Monster = "怪物"
+        MonumentEntity = "柱子怪"
     }
 })
 
-local SnareESP = AdvancedESP.new({"Snare", "地刺", "Trap"})
+local SnareESP = AdvancedESP.new({"Snare", "地刺"})
 SnareESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 300,
     HighlightColor = Color3.fromRGB(144, 238, 144),
-    LabelSize = 12,
+    LabelSize = 8,
     DisplayNames = {
-        Snare = "地刺陷阱",
-        Trap = "陷阱"
+        Snare = "地刺"
     }
 })
 
@@ -652,19 +650,22 @@ MandrakeESP:SetConfig({
     MarkerName = "Body",
     LabelSize = 12,
     DisplayNames = {
-        Mandrake = "毒萝卜"
+        Mandrake = "萝卜"
     }
 })
 
-local DoorESP = AdvancedESP.new({"Door", "门", "Exit"})
+local DoorESP = AdvancedESP.new({"Door", "门"})
 DoorESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 1000,
     HighlightColor = Color3.fromRGB(100, 149, 237),
-    LabelSize = 14,
+    LabelSize = 8,
+    CheckMarker = true,
+    -- workspace.CurrentRooms["0"].Door.Door.Attachment
+    MarkerName = "Attachment",
+    ExactMatch = true,
     DisplayNames = {
-        Door = "出口门",
-        Exit = "出口"
+        Door = "门"
     }
 })
 
@@ -673,10 +674,10 @@ GroundskeeperESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 400,
     HighlightColor = Color3.fromRGB(220, 20, 60),
-    LabelSize = 14,
+    ExactMatch = true,
+    LabelSize = 8,
     DisplayNames = {
-        Groundskeeper = "监管者",
-        Keeper = "守卫"
+        Groundskeeper = "监管"
     }
 })
 
