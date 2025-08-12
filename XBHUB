@@ -1,4 +1,4 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfieldb'))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 Rayfield:Notify({
     Title = "XB脚本",
@@ -669,7 +669,7 @@ DoorESP:SetConfig({
     }
 })
 
-local GroundskeeperESP = AdvancedESP.new({"Groundskeeper", "监管", "Keeper"})
+local GroundskeeperESP = AdvancedESP.new({"Groundskeeper", "监管"})
 GroundskeeperESP:SetConfig({
     ScanRecursive = true,
     MaxDistance = 400,
