@@ -1,87 +1,40 @@
-local Rayfield
-local success, err = pcall(function()
-    Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield', true))()
-end)
+-- 加载Linoria UI库
+local repo = 'https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/'
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
-if not success or not Rayfield then
-    success, err = pcall(function()
-        Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source', true))()
-    end)
-    if not success then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "脚本加载失败",
-            Text = "无法加载Rayfield库: "..tostring(err),
-            Duration = 10
-        })
-        return
-    end
-end
-
-Rayfield:Notify({
-    Title = "XB脚本",
-    Content = "检测中",
-    Duration = 5
+-- 创建主窗口
+local Window = Library:CreateWindow({
+    Title = 'THE OUTDOORS 高级脚本',
+    Center = true,
+    AutoShow = true,
+    Resizable = true,
+    ShowCustomCursor = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2
 })
 
-if game.PlaceId == 6839171747 then
+-- 创建标签页
+local Tabs = {
+    Main = Window:AddTab('主要功能'),
+    ESP = Window:AddTab('透视功能'),
+    Other = Window:AddTab('其他工具')
+}
 
-Rayfield:Notify({
-    Title = "XB脚本",
-    Content = "检测到THE OUTDOORS,已启动脚本",
-    Duration = 5
-})
-
-local ESP
-success, err = pcall(function()
-    local ESPLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/MSESP/refs/heads/main/source.luau", true))()
-    ESP = getgenv().mstudio45_ESP or ESPLib
-end)
-
-if not success or not ESP then
-    ESP = {
-        Add = function() return {} end,
-        Remove = function() end,
-        Initialize = function() end
-    }
-    warn("ESP加载失败，功能受限:", err)
-end
-
-pcall(function()
-    ESP:Initialize({
-        PrimaryColor = Color3.new(1,1,1),
-        SecondaryColor = Color3.new(0,0,0),
-        FontColor = Color3.new(1,1,1),
-        MaxDistance = 1000,
-        TracerOrigin = "Bottom",
-        ShowDistance = true,
-        ShowTracer = false,
-        ShowName = true,
-        TeamCheck = false,
-        TeamColor = false,
-        FillTransparency = 0.3,
-        OutlineTransparency = 0.8
-    })
-end)
-
+-- 初始化变量
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local Camera = game:GetService("Workspace").CurrentCamera
-
-local Window = Rayfield:CreateWindow({
-    Name = "THE OUTDOORS",
-    LoadingTitle = "XB脚本--THE OUTDOORS",
-    ConfigurationSaving = { Enabled = false },
-    Discord = { Enabled = false },
-    KeySystem = false
-})
-
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 
-local MainTab = Window:CreateTab("主要",nil)
+-- 主要功能组
+local MainGroup = Tabs.Main:AddLeftGroupbox('主要功能')
 
+-- 亮度设置
 local highBrightnessEnabled = false
 local brightnessLevel = 1
 local brightnessConnection
@@ -98,9 +51,10 @@ local function updateBrightness()
     end
 end
 
-MainTab:CreateToggle({
-    Name = "高亮",
-    CurrentValue = false,
+MainGroup:AddToggle('HighBrightness', {
+    Text = '开启高亮模式',
+    Default = false,
+    Tooltip = '提高游戏整体亮度',
     Callback = function(Value)
         highBrightnessEnabled = Value
         if brightnessConnection then
@@ -115,22 +69,23 @@ MainTab:CreateToggle({
     end
 })
 
-MainTab:CreateSlider({
-    Name = "亮度",
-    Range = {1, 10},
-    Increment = 0.1,
-    Suffix = "x",
-    CurrentValue = 1,
+MainGroup:AddSlider('BrightnessLevel', {
+    Text = '亮度调整',
+    Default = 1,
+    Min = 1,
+    Max = 10,
+    Rounding = 1,
+    Suffix = 'x',
     Callback = function(Value)
         brightnessLevel = Value
         if highBrightnessEnabled then updateBrightness() end
     end
 })
 
+-- 速度设置
 local speedHackEnabled = false
 local targetSpeed = 16
 local currentMultiplier = 1
-local lastSpeedIncrease = os.clock()
 
 local speedConnection = RunService.Heartbeat:Connect(function()
     if speedHackEnabled and Humanoid then
@@ -138,9 +93,10 @@ local speedConnection = RunService.Heartbeat:Connect(function()
     end
 end)
 
-MainTab:CreateToggle({
-    Name = "速度调整",
-    CurrentValue = false,
+MainGroup:AddToggle('SpeedHack', {
+    Text = '开启速度调整',
+    Default = false,
+    Tooltip = '提高移动速度',
     Callback = function(Value)
         speedHackEnabled = Value
         if not Value and Humanoid then 
@@ -153,12 +109,13 @@ MainTab:CreateToggle({
     end
 })
 
-MainTab:CreateSlider({
-    Name = "速度倍数 (1~6x)",
-    Range = {1, 6},
-    Increment = 0.1,
-    Suffix = "x",
-    CurrentValue = 1,
+MainGroup:AddSlider('SpeedMultiplier', {
+    Text = '速度倍数 (1~6x)',
+    Default = 1,
+    Min = 1,
+    Max = 6,
+    Rounding = 1,
+    Suffix = 'x',
     Callback = function(Value)
         currentMultiplier = Value
         targetSpeed = 16 * Value
@@ -168,16 +125,18 @@ MainTab:CreateSlider({
     end
 })
 
+-- 第三人称视角
 local cameraOffset = 0
 local cameraHeightOffset = 1.5
 local cameraConnection
 
-MainTab:CreateSlider({
-    Name = "第三人称视角距离",
-    Range = {0, 10},
-    Increment = 0.1,
-    Suffix = "米",
-    CurrentValue = 0,
+MainGroup:AddSlider('ThirdPersonDistance', {
+    Text = '第三人称视角距离',
+    Default = 0,
+    Min = 0,
+    Max = 10,
+    Rounding = 1,
+    Suffix = '米',
     Callback = function(Value)
         cameraOffset = Value
         if cameraConnection then cameraConnection:Disconnect() end
@@ -200,12 +159,14 @@ MainTab:CreateSlider({
     end
 })
 
+-- 删除闪电功能
 local deleteSurgeEnabled = false
 local surgeConnection
 
-MainTab:CreateToggle({
-    Name = "删除闪电(Beta)",
-    CurrentValue = false,
+MainGroup:AddToggle('DeleteSurge', {
+    Text = '删除闪电(Beta)',
+    Default = false,
+    Tooltip = '持续删除游戏中的闪电效果',
     Callback = function(Value)
         deleteSurgeEnabled = Value
         if Value then
@@ -233,11 +194,7 @@ MainTab:CreateToggle({
                 end
             end)
             
-            Rayfield:Notify({
-                Title = "删除闪电",
-                Content = string.format("已删除 %d 个闪电, 开始持续删除", count),
-                Duration = 5
-            })
+            Library:Notify("删除闪电", string.format("已删除 %d 个闪电, 开始持续删除", count))
         else
             if surgeConnection then
                 surgeConnection:Disconnect()
@@ -247,8 +204,41 @@ MainTab:CreateToggle({
     end
 })
 
-local ESPTab = Window:CreateTab("透视", 4483362458)
+-- 安全加载ESP库
+local ESP
+local success, err = pcall(function()
+    local ESPLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/MSESP/refs/heads/main/source.luau", true))()
+    ESP = getgenv().mstudio45_ESP or ESPLib
+end)
 
+if not success or not ESP then
+    ESP = {
+        Add = function() return {} end,
+        Remove = function() end,
+        Initialize = function() end
+    end
+    warn("ESP加载失败，功能受限:", err)
+end
+
+pcall(function()
+    ESP:Initialize({
+        PrimaryColor = Color3.new(1,1,1),
+        SecondaryColor = Color3.new(0,0,0),
+        FontColor = Color3.new(1,1,1),
+        MaxDistance = 1000,
+        TracerOrigin = "Bottom",
+        ShowDistance = true,
+        ShowTracer = false,
+        ShowName = true,
+        TeamCheck = false,
+        TeamColor = false,
+        FillTransparency = 0.3,
+        OutlineTransparency = 0.8
+    })
+end)
+
+-- 透视功能组
+local ESPGroup = Tabs.ESP:AddLeftGroupbox('透视功能')
 local ESPManager = {
     Objects = {},
     Connections = {}
@@ -288,9 +278,11 @@ local function safeRemoveESP(obj)
     end
 end
 
-ESPTab:CreateToggle({
-    Name = "柱子透视",
-    CurrentValue = false,
+-- 柱子透视
+ESPGroup:AddToggle('PillarESP', {
+    Text = '柱子透视',
+    Default = false,
+    Tooltip = '显示柱子位置',
     Callback = function(Value)
         if Value then
             for _, obj in pairs(workspace:GetDescendants()) do
@@ -329,16 +321,18 @@ ESPTab:CreateToggle({
     end
 })
 
-ESPTab:CreateToggle({
-    Name = "监管透视",
-    CurrentValue = false,
+-- 监管透视
+ESPGroup:AddToggle('KeeperESP', {
+    Text = '监管透视',
+    Default = false,
+    Tooltip = '显示监管位置',
     Callback = function(Value)
         if Value then
             for _, obj in pairs(workspace:GetDescendants()) do
                 if (obj.Name == "Groundskeeper" or obj.Name == "监管") and obj:IsA("Model") then
                     safeAddESP(obj, {
                         Name = "监管",
-                        Color = Color3.fromRGB(220, 20, 60) -- 红色
+                        Color = Color3.fromRGB(220, 20, 60)
                     })
                 end
             end
@@ -359,7 +353,7 @@ ESPTab:CreateToggle({
                     safeRemoveESP(obj)
                 end
             end
-          
+            
             for i = #ESPManager.Connections, 1, -1 do
                 local conn = ESPManager.Connections[i]
                 if not conn.Connected then
@@ -370,9 +364,11 @@ ESPTab:CreateToggle({
     end
 })
 
-ESPTab:CreateToggle({
-    Name = "地刺透视",
-    CurrentValue = false,
+-- 地刺透视
+ESPGroup:AddToggle('SnareESP', {
+    Text = '地刺透视',
+    Default = false,
+    Tooltip = '显示地刺位置',
     Callback = function(Value)
         if Value then
             if workspace:FindFirstChild("CurrentRooms") then
@@ -413,7 +409,7 @@ ESPTab:CreateToggle({
                     safeRemoveESP(obj)
                 end
             end
-          
+            
             for i = #ESPManager.Connections, 1, -1 do
                 local conn = ESPManager.Connections[i]
                 if not conn.Connected then
@@ -424,9 +420,11 @@ ESPTab:CreateToggle({
     end
 })
 
-ESPTab:CreateToggle({
-    Name = "萝卜透视",
-    CurrentValue = false,
+-- 萝卜透视
+ESPGroup:AddToggle('MandrakeESP', {
+    Text = '萝卜透视',
+    Default = false,
+    Tooltip = '显示萝卜位置',
     Callback = function(Value)
         if Value then
             for _, obj in pairs(workspace:GetDescendants()) do
@@ -437,7 +435,7 @@ ESPTab:CreateToggle({
                     })
                 end
             end
-           
+            
             local conn = workspace.DescendantAdded:Connect(function(obj)
                 if (obj.Name == "Mandrake" or obj.Name == "萝卜") and obj:IsA("Model") then
                     safeAddESP(obj, {
@@ -454,7 +452,7 @@ ESPTab:CreateToggle({
                     safeRemoveESP(obj)
                 end
             end
-           
+            
             for i = #ESPManager.Connections, 1, -1 do
                 local conn = ESPManager.Connections[i]
                 if not conn.Connected then
@@ -465,6 +463,7 @@ ESPTab:CreateToggle({
     end
 })
 
+-- 门透视系统
 local DoorESP = {
     Enabled = false,
     Doors = {},
@@ -533,9 +532,10 @@ local function scanAllDoors()
     end
 end
 
-ESPTab:CreateToggle({
-    Name = "门透视系统",
-    CurrentValue = false,
+ESPGroup:AddToggle('DoorESP', {
+    Text = '门透视系统',
+    Default = false,
+    Tooltip = '显示门状态',
     Callback = function(Value)
         DoorESP.Enabled = Value
         if Value then
@@ -556,7 +556,6 @@ ESPTab:CreateToggle({
                 end
             end
         else
-        
             for door, esp in pairs(DoorESP.Doors) do
                 pcall(function()
                     if ESP.Remove then
@@ -574,6 +573,7 @@ ESPTab:CreateToggle({
     end
 })
 
+-- 铁门和按钮透视
 local GateESP = {
     Enabled = false,
     Gates = {},
@@ -655,9 +655,10 @@ local function scanAllGates()
     end
 end
 
-ESPTab:CreateToggle({
-    Name = "铁门和按钮透视",
-    CurrentValue = false,
+ESPGroup:AddToggle('GateESP', {
+    Text = '铁门和按钮透视',
+    Default = false,
+    Tooltip = '显示铁门和按钮位置',
     Callback = function(Value)
         GateESP.Enabled = Value
         if Value then
@@ -694,14 +695,11 @@ ESPTab:CreateToggle({
     end
 })
 
-local OtherTab = Window:CreateTab("其他")
+-- 其他工具组
+local OtherGroup = Tabs.Other:AddLeftGroupbox('其他工具')
 
 local function loadTool(name, url)
-    Rayfield:Notify({
-        Title = name.."加载中...",
-        Content = "请稍候",
-        Duration = 2
-    })
+    Library:Notify(name.."加载中...", "请稍候")
     
     local start = os.clock()
     local success, result = pcall(function()
@@ -709,41 +707,25 @@ local function loadTool(name, url)
     end)
     
     if success then
-        Rayfield:Notify({
-            Title = name.."已加载",
-            Content = string.format("加载耗时: %.2f秒", os.clock() - start),
-            Duration = 3
-        })
+        Library:Notify(name.."已加载", string.format("加载耗时: %.2f秒", os.clock() - start))
     else
-        Rayfield:Notify({
-            Title = "加载失败",
-            Content = name.."错误: "..tostring(result),
-            Duration = 5
-        })
+        Library:Notify("加载失败", name.."错误: "..tostring(result))
     end
 end
 
-OtherTab:CreateButton({
-    Name = "Dex",
-    Callback = function()
-        loadTool("Dex", 'https://raw.githubusercontent.com/infyiff/backup/main/dex.lua')
-    end
-})
+OtherGroup:AddButton('Dex 浏览器', function()
+    loadTool("Dex", 'https://raw.githubusercontent.com/infyiff/backup/main/dex.lua')
+end)
 
-OtherTab:CreateButton({
-    Name = "Spy",
-    Callback = function()
-        loadTool("Spy", "https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua")
-    end
-})
+OtherGroup:AddButton('Spy 调试器', function()
+    loadTool("Spy", "https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua")
+end)
 
-OtherTab:CreateButton({
-    Name = "IY",
-    Callback = function()
-        loadTool("IY", 'https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source')
-    end
-})
+OtherGroup:AddButton('无限收益 (IY)', function()
+    loadTool("IY", 'https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source')
+end)
 
+-- 玩家离开时清理资源
 game:GetService("Players").PlayerRemoving:Connect(function(player)
     if player == LocalPlayer then
         if speedConnection then speedConnection:Disconnect() end
@@ -785,42 +767,81 @@ game:GetService("Players").PlayerRemoving:Connect(function(player)
     end
 end)
 
+-- UI设置标签页
+local SettingsTab = Window:AddTab('UI设置')
+local MenuGroup = SettingsTab:AddLeftGroupbox('菜单设置')
+
+-- 添加主题管理和保存管理
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+
+-- 设置文件夹
+ThemeManager:SetFolder('XB_Script')
+SaveManager:SetFolder('XB_Script/THE_OUTDOORS')
+
+-- 构建配置部分
+SaveManager:BuildConfigSection(SettingsTab)
+ThemeManager:ApplyToTab(SettingsTab)
+
+-- 添加菜单控件
+MenuGroup:AddToggle('KeybindToggle', {
+    Text = '显示快捷键菜单',
+    Default = true,
+    Callback = function(Value)
+        Library.KeybindFrame.Visible = Value
+    end
+})
+
+MenuGroup:AddToggle('CustomCursor', {
+    Text = '自定义光标',
+    Default = true,
+    Callback = function(Value)
+        Library.ShowCustomCursor = Value
+    end
+})
+
+MenuGroup:AddLabel('菜单快捷键'):AddKeyPicker('MenuKeybind', {
+    Default = 'RightShift',
+    NoUI = true,
+    Text = '菜单快捷键'
+})
+
+MenuGroup:AddButton('卸载脚本', function()
+    Library:Unload()
+end)
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+-- 设置水印
+Library:SetWatermarkVisibility(true)
+local WatermarkConnection = game:GetService('RunService').RenderStepped:Connect(function()
+    Library:SetWatermark('XB脚本 | THE OUTDOORS')
+end)
+
+-- 卸载时清理
+Library:OnUnload(function()
+    WatermarkConnection:Disconnect()
+    print('脚本已卸载')
+end)
+
+-- 游戏检测
+Library:Notify("XB脚本", "检测中")
+
+if game.PlaceId == 6839171747 then
+    Library:Notify("XB脚本", "检测到THE OUTDOORS,已启动脚本")
 elseif game.PlaceId == 95702387256198 then
-
     loadstring(game:HttpGet("https://raw.githubusercontent.com/sjsksjsk219/aaaaaa/refs/heads/main/偷一辆车"))()
-
-    Rayfield:Notify({
-        Title = "XB脚本",
-       Content = "检测到偷一辆车,已自动开启脚本",
-        Duration = 5
-    })
-
+    Library:Notify("XB脚本", "检测到偷一辆车,已自动开启脚本")
 elseif game.PlaceId == 18687417158 then
-
     loadstring(game:HttpGet("https://raw.githubusercontent.com/sjsksjsk219/aaaaaa/refs/heads/main/%E8%A2%AB%E9%81%97%E5%BC%83"))()
-
-    Rayfield:Notify({
-       Title = "XB脚本",
-        Content = "检测到被遗弃,已自动开启脚本",
-        Duration = 5
-    })
-
+    Library:Notify("XB脚本", "检测到被遗弃,已自动开启脚本")
 elseif game.PlaceId == 12552538292 then
-
     loadstring(game:HttpGet("https://raw.githubusercontent.com/sjsksjsk219/aaaaaa/refs/heads/main/Pressure"))()
-
-    Rayfield:Notify({
-       Title = "XB脚本",
-       Content = "检测到压力,已自动打开脚本",
-        Duration = 5
-    })
-    
+    Library:Notify("XB脚本", "检测到压力,已自动打开脚本")
 else
-    Rayfield:Notify({
-        Title = "XB脚本",
-        Content = "没有这服务器的脚本,需要请加群249592274",
-        Duration = 5
-    })
+    Library:Notify("XB脚本", "没有这服务器的脚本,需要请加群249592274")
     wait(5)
     setclipboard("加Q:249592274")
     LocalPlayer:Kick("请更换服务器或脚本")
