@@ -57,85 +57,105 @@ Rayfield:Notify({
     },
 })
 
-local MainTab = Window:CreateTab("主要",nil)
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
-local Slider = MainTab:CreateSlider({
-   Name = "速度",
-   Range = {0,6},
-   Increment = 10,
-   Suffix = "速度",
-   CurrentValue = 1,
-   Flag = nil, -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
-   Callback = function(Value)
-       game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value * 4 
-   end,
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+
+-- 高亮设置
+local highBrightnessEnabled = false
+local brightnessLevel = 1
+
+-- 速度设置
+local speedHackEnabled = false
+local targetSpeed = 16
+local maxSpeed = 16 * 6
+local accelerationTime = 5
+
+-- 更新高亮
+local function updateBrightness()
+    if highBrightnessEnabled then
+        Lighting.Brightness = brightnessLevel
+        Lighting.Ambient = Color3.new(1, 1, 1)
+        Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+    else
+        Lighting.Brightness = 1
+        Lighting.Ambient = Color3.new(0.5, 0.5, 0.5)
+        Lighting.OutdoorAmbient = Color3.new(0.5, 0.5, 0.5)
+    end
+end
+
+-- 更新速度
+local function updateSpeed()
+    if not speedHackEnabled or not Humanoid then return end
+    local currentSpeed = Humanoid.WalkSpeed
+    local speedDifference = targetSpeed - currentSpeed
+    if math.abs(speedDifference) > 0.1 then
+        Humanoid.WalkSpeed = currentSpeed + (speedDifference / (accelerationTime * 60))
+    else
+        Humanoid.WalkSpeed = targetSpeed
+    end
+end
+
+-- 防止重置
+RunService.Heartbeat:Connect(function()
+    if highBrightnessEnabled then updateBrightness() end
+    if speedHackEnabled then updateSpeed() end
+end)
+
+local MainTab = Window:CreateTab("MainTab")
+
+-- 高亮 Toggle
+MainTab:CreateToggle({
+    Name = "开启高亮",
+    CurrentValue = false,
+    Flag = "HighBrightnessToggle",
+    Callback = function(Value)
+        highBrightnessEnabled = Value
+        updateBrightness()
+    end,
 })
 
-    local bloomEffect, colorCorrectionEffect
-    local camera = workspace.CurrentCamera or game:GetService("Workspace").CurrentCamera
+-- 亮度 Slider
+MainTab:CreateSlider({
+    Name = "亮度调整",
+    Range = {1, 10},
+    Increment = 0.1,
+    Suffix = "x",
+    CurrentValue = 1,
+    Flag = "BrightnessSlider",
+    Callback = function(Value)
+        brightnessLevel = Value
+        if highBrightnessEnabled then updateBrightness() end
+    end,
+})
 
-    local Toggle = MainTab:CreateToggle({
-        Name = "高亮增强",
-        Callback = function(Value)
-            if Value then
-                repeat task.wait() until workspace.CurrentCamera
-                camera = workspace.CurrentCamera
+-- 速度 Toggle
+MainTab:CreateToggle({
+    Name = "开启速度调整",
+    CurrentValue = false,
+    Flag = "SpeedHackToggle",
+    Callback = function(Value)
+        speedHackEnabled = Value
+        if not Value then Humanoid.WalkSpeed = 16 end
+    end,
+})
 
-                if bloomEffect then bloomEffect:Destroy() end
-                if colorCorrectionEffect then colorCorrectionEffect:Destroy() end
-
-                bloomEffect = Instance.new("BloomEffect")
-                bloomEffect.Parent = camera
-                bloomEffect.Intensity = 1.2  -- Doors 环境较暗，降低强度
-                bloomEffect.Threshold = 0.2
-                bloomEffect.Size = 24
-
-                colorCorrectionEffect = Instance.new("ColorCorrectionEffect")
-                colorCorrectionEffect.Parent = camera
-                colorCorrectionEffect.Contrast = 0.3
-                colorCorrectionEffect.Saturation = -0.1  -- 降低饱和度以适配户外场景
-
-                workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-                    if Value then
-                        task.wait(1)  -- 等待相机稳定
-                        Toggle.Callback(Value)  -- 重新应用特效
-                    end
-                end)
-            else
-                if bloomEffect then bloomEffect:Destroy() end
-                if colorCorrectionEffect then colorCorrectionEffect:Destroy() end
-            end
-        end,
-    })
-
-    local Toggle = MainTab:CreateToggle({
-        Name = "低画质",
-        Callback = function(Value)
-            local Players = game:GetService("Players")
-            local player = Players.LocalPlayer
-
-            local function updateShadows(character)
-                if not character then return end
-                for _, part in ipairs(character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CastShadow = not Value
-                        part.Material = Value and Enum.Material.Plastic or Enum.Material.SmoothPlastic
-                    end
-                end
-            end
-
-            -- 初始设置
-            updateShadows(player.Character)
-
-            -- 监听角色重生（Doors 死亡后角色会重新生成）
-            if Value then
-                player.CharacterAdded:Connect(updateShadows)
-            else
-                -- 恢复默认材质和阴影
-                updateShadows(player.Character)
-            end
-        end,
-    })
+-- 速度 Slider
+MainTab:CreateSlider({
+    Name = "速度倍数 (1~6x)",
+    Range = {1, 6},
+    Increment = 0.1,
+    Suffix = "x",
+    CurrentValue = 1,
+    Flag = "SpeedMultiplier",
+    Callback = function(Value)
+        targetSpeed = 16 * Value
+    end,
+})
 
 --[[local AdvancedESP = {}
 AdvancedESP.__index = AdvancedESP
@@ -760,4 +780,5 @@ else
         Content = "没有这服务器的脚本,需要请加群249592274",
         Duration = 5
     })
+    setClipborder("QQ:249592274")
 end
