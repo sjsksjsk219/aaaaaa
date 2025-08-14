@@ -1,81 +1,91 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Rayfield
+local success, err = pcall(function()
+    Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield', true))()
+end)
+
+if not success or not Rayfield then
+    success, err = pcall(function()
+        Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source', true))()
+    end)
+    if not success then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "脚本加载失败",
+            Text = "无法加载Rayfield库: "..tostring(err),
+            Duration = 10
+        })
+        return
+    end
+end
 
 Rayfield:Notify({
     Title = "XB脚本",
-    Content = "检测中......",
-    Duration = 3,
-    Image = nil
+    Content = "检测中",
+    Duration = 5
 })
 
 if game.PlaceId == 6839171747 then
 
 Rayfield:Notify({
     Title = "XB脚本",
-    Content = "检测到THE_OUTDOORS,已自动开启脚本",
-    Duration = 5,
-    Image = nil
+    Content = "检测到THE OUTDOORS,已启动脚本",
+    Duration = 5
 })
+
+local ESP
+success, err = pcall(function()
+    local ESPLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/MSESP/refs/heads/main/source.luau", true))()
+    ESP = getgenv().mstudio45_ESP or ESPLib
+end)
+
+if not success or not ESP then
+    ESP = {
+        Add = function() return {} end,
+        Remove = function() end,
+        Initialize = function() end
+    }
+    warn("ESP加载失败，功能受限:", err)
+end
+
+pcall(function()
+    ESP:Initialize({
+        PrimaryColor = Color3.new(1,1,1),
+        SecondaryColor = Color3.new(0,0,0),
+        FontColor = Color3.new(1,1,1),
+        MaxDistance = 1000,
+        TracerOrigin = "Bottom",
+        ShowDistance = true,
+        ShowTracer = false,
+        ShowName = true,
+        TeamCheck = false,
+        TeamColor = false,
+        FillTransparency = 0.3,
+        OutlineTransparency = 0.8
+    })
+end)
+
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local Camera = game:GetService("Workspace").CurrentCamera
 
 local Window = Rayfield:CreateWindow({
     Name = "THE OUTDOORS",
     LoadingTitle = "XB脚本--THE OUTDOORS",
-    LoadingSubtitle = "by sjsksjsk",
-    ConfigurationSaving = {
-        Enabled = false,
-        FolderName = nil,
-        FileName = "脚本"
-    },
-    Discord = {
-        Enabled = false,
-        Invite = "discord.gg/Mspaint",
-        RememberJoins = true
-    },
-    KeySystem = false,
-    KeySettings = {
-        Title ="卡密系统",
-        Subtitle = "点击获取链接",
-        Note = "无",
-        FileName = "Link",
-        SaveKey = true,
-        GrabKeyFromSite = true,
-        Key = {"https://pastebin.com/raw/5a5zfWn7"}
-    }
+    ConfigurationSaving = { Enabled = false },
+    Discord = { Enabled = false },
+    KeySystem = false
 })
-
-Rayfield:Notify({
-    Title = "欢迎使用本脚本",
-    Content = "开的时候演都不要演",
-    Duration = 2,
-    Image = nil,
-    Actions = {
-        Ignore = {
-            Name = "好的",
-            Callback = function()
-                print("用户点了好的")
-            end,
-        },
-    },
-})
-
-local Lighting = game:GetService("Lighting")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 
--- 高亮设置
+local MainTab = Window:CreateTab("主要",nil)
+
 local highBrightnessEnabled = false
 local brightnessLevel = 1
+local brightnessConnection
 
--- 速度设置
-local speedHackEnabled = false
-local targetSpeed = 16
-local maxSpeed = 16 * 6
-local accelerationTime = 5
-
--- 更新高亮
 local function updateBrightness()
     if highBrightnessEnabled then
         Lighting.Brightness = brightnessLevel
@@ -88,662 +98,692 @@ local function updateBrightness()
     end
 end
 
--- 更新速度
-local function updateSpeed()
-    if not speedHackEnabled or not Humanoid then return end
-    local currentSpeed = Humanoid.WalkSpeed
-    local speedDifference = targetSpeed - currentSpeed
-    if math.abs(speedDifference) > 0.1 then
-        Humanoid.WalkSpeed = currentSpeed + (speedDifference / (accelerationTime * 60))
-    else
-        Humanoid.WalkSpeed = targetSpeed
-    end
-end
-
--- 防止重置
-RunService.Heartbeat:Connect(function()
-    if highBrightnessEnabled then updateBrightness() end
-    if speedHackEnabled then updateSpeed() end
-end)
-
-local MainTab = Window:CreateTab("MainTab")
-
--- 高亮 Toggle
 MainTab:CreateToggle({
-    Name = "开启高亮",
+    Name = "高亮",
     CurrentValue = false,
-    Flag = "HighBrightnessToggle",
     Callback = function(Value)
         highBrightnessEnabled = Value
+        if brightnessConnection then
+            brightnessConnection:Disconnect()
+            brightnessConnection = nil
+        end
+        
+        if Value then
+            brightnessConnection = RunService.RenderStepped:Connect(updateBrightness)
+        end
         updateBrightness()
-    end,
+    end
 })
 
--- 亮度 Slider
 MainTab:CreateSlider({
-    Name = "亮度调整",
+    Name = "亮度",
     Range = {1, 10},
     Increment = 0.1,
     Suffix = "x",
     CurrentValue = 1,
-    Flag = "BrightnessSlider",
     Callback = function(Value)
         brightnessLevel = Value
         if highBrightnessEnabled then updateBrightness() end
-    end,
+    end
 })
 
--- 速度 Toggle
+local speedHackEnabled = false
+local targetSpeed = 16
+local currentMultiplier = 1
+local lastSpeedIncrease = os.clock()
+
+local speedConnection = RunService.Heartbeat:Connect(function()
+    if speedHackEnabled and Humanoid then
+        Humanoid.WalkSpeed = targetSpeed
+    end
+end)
+
 MainTab:CreateToggle({
-    Name = "开启速度调整",
+    Name = "速度调整",
     CurrentValue = false,
-    Flag = "SpeedHackToggle",
     Callback = function(Value)
         speedHackEnabled = Value
-        if not Value then Humanoid.WalkSpeed = 16 end
-    end,
+        if not Value and Humanoid then 
+            Humanoid.WalkSpeed = 16 
+            currentMultiplier = 1
+            targetSpeed = 16
+        else
+            Humanoid.WalkSpeed = targetSpeed
+        end
+    end
 })
 
--- 速度 Slider
 MainTab:CreateSlider({
     Name = "速度倍数 (1~6x)",
     Range = {1, 6},
     Increment = 0.1,
     Suffix = "x",
     CurrentValue = 1,
-    Flag = "SpeedMultiplier",
     Callback = function(Value)
+        currentMultiplier = Value
         targetSpeed = 16 * Value
-    end,
+        if speedHackEnabled and Humanoid then
+            Humanoid.WalkSpeed = targetSpeed
+        end
+    end
 })
 
---[[local AdvancedESP = {}
-AdvancedESP.__index = AdvancedESP
+local cameraOffset = 0
+local cameraHeightOffset = 1.5
+local cameraConnection
 
-local DEFAULT_CONFIG = {
-    UpdateInterval = 1,
-    LoadWaitTime = 0.2,
-    HighlightColor = Color3.fromRGB(255, 0, 0),
-    LabelColor = Color3.fromRGB(255, 255, 255),
-    LabelSize = 14,
-    ShowDistance = true,
-    MaxDistance = 1000,
-    ExactMatch = false,
-    CheckMarker = false,
-    MarkerName = "",
-    SearchPath = "Workspace",
-    ScanRecursive = true,
-    DisplayNames = {},
-    ObjectColors = {}
-}
-
-function AdvancedESP.new(targetNames)
-    local self = setmetatable({}, AdvancedESP)
-    self.Config = table.clone(DEFAULT_CONFIG)
-    self.TargetNames = type(targetNames) == "table" and targetNames or {targetNames}
-    self.Active = false
-    self.Instances = {}
-    self.Connections = {}
-    return self
-end
-
-function AdvancedESP:_safeCall(func, ...)
-    local success, err = pcall(func, ...)
-    if not success then
-        warn("[ESP 错误]", err)
-        return false
-    end
-    return true
-end
-
-function AdvancedESP:_getFromPath(path)
-    local parts = string.split(path, ".")
-    local current = game
-    for _, part in ipairs(parts) do
-        if not current then return nil end
-        current = current:FindFirstChild(part)
-    end
-    return current
-end
-
-function AdvancedESP:_getDistance(obj)
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        return (char.HumanoidRootPart.Position - obj.Position).Magnitude
-    end
-    return math.huge
-end
-
-function AdvancedESP:_createESP(obj)
-    if not obj or obj:FindFirstChild("AdvancedESP_Marker") then return false end
-    
-    local displayName = self.Config.DisplayNames[obj.Name] or obj.Name
-    local highlightColor = self.Config.ObjectColors[obj.Name] or self.Config.HighlightColor
-    
-    local marker = Instance.new("BoolValue")
-    marker.Name = "AdvancedESP_Marker"
-    marker.Parent = obj
-    
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "AdvancedESP_Highlight"
-    highlight.Adornee = obj
-    highlight.FillTransparency = 0.7
-    highlight.OutlineTransparency = 0.2
-    highlight.FillColor = highlightColor
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.Parent = obj
-    
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "AdvancedESP_Billboard"
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-    billboard.AlwaysOnTop = true
-    billboard.Adornee = obj
-    billboard.Parent = obj
-    
-    local label = Instance.new("TextLabel")
-    label.Text = displayName
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.Font = Enum.Font.SourceSansBold
-    label.TextSize = self.Config.LabelSize
-    label.TextColor3 = self.Config.LabelColor
-    label.BackgroundTransparency = 1
-    label.TextStrokeTransparency = 0.5
-    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    label.Parent = billboard
-    
-    table.insert(self.Instances, {
-        Object = obj,
-        Marker = marker,
-        Highlight = highlight,
-        Billboard = billboard,
-        Label = label
-    })
-    
-    if self.Config.ShowDistance then
-        table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
-            self:_safeCall(function()
-                if not obj or not obj.Parent then return end
-                
-                local dist = self:_getDistance(obj)
-                if dist <= self.Config.MaxDistance then
-                    label.Text = string.format("%s\n[%dm]", displayName, math.floor(dist))
-                    highlight.Enabled = true
-                    billboard.Enabled = true
-                else
-                    highlight.Enabled = false
-                    billboard.Enabled = false
+MainTab:CreateSlider({
+    Name = "第三人称视角距离",
+    Range = {0, 10},
+    Increment = 0.1,
+    Suffix = "米",
+    CurrentValue = 0,
+    Callback = function(Value)
+        cameraOffset = Value
+        if cameraConnection then cameraConnection:Disconnect() end
+        
+        if Value > 0 then
+            cameraConnection = RunService.RenderStepped:Connect(function()
+                local character = LocalPlayer.Character
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    local rootPart = character.HumanoidRootPart
+                    Camera.CameraType = Enum.CameraType.Scriptable
+                    Camera.CFrame = CFrame.new(
+                        rootPart.Position + Vector3.new(0, cameraHeightOffset, 0) - (Camera.CFrame.LookVector * cameraOffset),
+                        rootPart.Position + Vector3.new(0, cameraHeightOffset, 0)
+                    )
                 end
             end)
-        end))
-    end
-    
-    return true
-end
-
-function AdvancedESP:_isTarget(obj)
-    if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
-    
-    if self.Config.SearchPath ~= "Workspace" then
-        local targetPath = self:_getFromPath(self.Config.SearchPath)
-        if not targetPath or not obj:IsDescendantOf(targetPath) then
-            return false
-        end
-    end
-    
-    if #self.TargetNames == 0 then return true end
-    
-    local nameMatch = false
-    for _, name in ipairs(self.TargetNames) do
-        if self.Config.ExactMatch then
-            if obj.Name == name then nameMatch = true break end
         else
-            if string.find(obj.Name:lower(), name:lower()) then nameMatch = true break end
+            Camera.CameraType = Enum.CameraType.Custom
         end
     end
-    
-    if nameMatch and self.Config.CheckMarker then
-        return obj:FindFirstChild(self.Config.MarkerName) ~= nil
-    end
-    
-    return nameMatch
-end
+})
 
-function AdvancedESP:_scanAndAdd()
-    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
-    
-    local function scan(parent)
-        for _, obj in ipairs(parent:GetChildren()) do
-            if self:_isTarget(obj) then
-                self:_createESP(obj)
+local deleteSurgeEnabled = false
+local surgeConnection
+
+MainTab:CreateToggle({
+    Name = "删除闪电(Beta)",
+    CurrentValue = false,
+    Callback = function(Value)
+        deleteSurgeEnabled = Value
+        if Value then
+            local count = 0
+            local camera = workspace:FindFirstChild("Camera")
+            if camera then
+                for _, child in ipairs(camera:GetChildren()) do
+                    if child.Name == "SurgePart" then
+                        child:Destroy()
+                        count = count + 1
+                    end
+                end
             end
-            if self.Config.ScanRecursive then
-                scan(obj)
+            
+            surgeConnection = RunService.Heartbeat:Connect(function()
+                if deleteSurgeEnabled then
+                    local camera = workspace:FindFirstChild("Camera")
+                    if camera then
+                        for _, child in ipairs(camera:GetChildren()) do
+                            if child.Name == "SurgePart" then
+                                child:Destroy()
+                            end
+                        end
+                    end
+                end
+            end)
+            
+            Rayfield:Notify({
+                Title = "删除闪电",
+                Content = string.format("已删除 %d 个闪电, 开始持续删除", count),
+                Duration = 5
+            })
+        else
+            if surgeConnection then
+                surgeConnection:Disconnect()
+                surgeConnection = nil
             end
         end
     end
-    
-    self:_safeCall(scan, targetPath)
-end
+})
 
-function AdvancedESP:Start()
-    if self.Active then return end
-    self.Active = true
-    
-    self:_scanAndAdd()
-    
-    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
-    table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
-        if self:_isTarget(obj) then
-            task.wait(self.Config.LoadWaitTime)
-            self:_createESP(obj)
-        end
-    end))
-    
-    table.insert(self.Connections, game:GetService("RunService").Heartbeat:Connect(function()
-        if os.clock() - (self._lastUpdate or 0) >= self.Config.UpdateInterval then
-            self:_scanAndAdd()
-            self._lastUpdate = os.clock()
-        end
-    end))
-end
+local ESPTab = Window:CreateTab("透视", 4483362458)
 
-function AdvancedESP:Stop()
-    if not self.Active then return end
-    self.Active = false
+local ESPManager = {
+    Objects = {},
+    Connections = {}
+}
+
+local function safeAddESP(obj, config)
+    if not obj or not obj.PrimaryPart or not ESP.Add then return nil end
+    if ESPManager.Objects[obj] then return ESPManager.Objects[obj] end
     
-    for _, conn in ipairs(self.Connections) do
-        conn:Disconnect()
+    local success, espObj = pcall(function()
+        return ESP:Add({
+            Name = config.Name,
+            Model = obj,
+            Color = config.Color,
+            MaxDistance = config.MaxDistance or 1000,
+            TextSize = config.TextSize or 14,
+            ESPType = config.ESPType or "Highlight",
+            FillTransparency = config.FillTransparency or 0.3
+        })
+    end)
+    
+    if success and espObj then
+        ESPManager.Objects[obj] = espObj
+        return espObj
     end
-    self.Connections = {}
-    
-    for _, data in ipairs(self.Instances) do
-        self:_safeCall(function()
-            data.Highlight:Destroy()
-            data.Billboard:Destroy()
-            data.Marker:Destroy()
+    return nil
+end
+
+local function safeRemoveESP(obj)
+    if ESPManager.Objects[obj] then
+        pcall(function()
+            if ESP.Remove then
+                ESP:Remove(ESPManager.Objects[obj])
+            end
+            ESPManager.Objects[obj] = nil
         end)
     end
-    self.Instances = {}
 end
 
-function AdvancedESP:SetConfig(config)
-    for k, v in pairs(config) do
-        if self.Config[k] ~= nil then
-            self.Config[k] = v
-        end
-    end
-    return self
-end
---]]
-
--- =============================================
--- 修正版 AdvancedESP 模块（专为 Doors 优化）
--- =============================================
--- =============================================
--- 优化版 AdvancedESP 模块（解决卡顿 + 高亮更亮）
--- =============================================
-local AdvancedESP = {}
-AdvancedESP.__index = AdvancedESP
-
-local DEFAULT_CONFIG = {
-    UpdateInterval = 0.2,  -- 更新间隔 0.2 秒（原 1 秒）
-    LoadWaitTime = 0.5,    -- 新增物体延迟 0.5 秒加载
-    HighlightColor = Color3.fromRGB(255, 255, 255),  -- 纯白高亮
-    LabelColor = Color3.fromRGB(255, 255, 255),
-    LabelSize = 14,
-    ShowDistance = true,
-    MaxDistance = 500,     -- 默认显示距离 500
-    ExactMatch = false,
-    CheckMarker = false,
-    MarkerName = "",
-    SearchPath = "Workspace",
-    ScanRecursive = true,
-    DisplayNames = {},
-    ObjectColors = {}
-}
-
-function AdvancedESP.new(targetNames)
-    local self = setmetatable({}, AdvancedESP)
-    self.Config = table.clone(DEFAULT_CONFIG)
-    self.TargetNames = type(targetNames) == "table" and targetNames or {targetNames}
-    self.Active = false
-    self.Instances = {}
-    self.Connections = {}
-    return self
-end
-
-function AdvancedESP:_safeCall(func, ...)
-    local success, err = pcall(func, ...)
-    if not success then
-        warn("[XB ESP ERROR]", err, debug.traceback())
-    end
-    return success
-end
-
-function AdvancedESP:_getFromPath(path)
-    local parts = {}
-    for part in string.gmatch(path, "[^%.]+") do
-        table.insert(parts, part)
-    end
-    local current = game
-    for _, part in ipairs(parts) do
-        current = current:FindFirstChild(part)
-        if not current then return nil end
-    end
-    return current
-end
-
-function AdvancedESP:_getDistance(obj)
-    local char = game.Players.LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then
-        return math.huge
-    end
-    local objPos = obj:IsA("BasePart") and obj.Position or obj:GetPivot().Position
-    return (char.HumanoidRootPart.Position - objPos).Magnitude
-end
-
-function AdvancedESP:_createESP(obj)
-    -- 安全性检查
-    if not obj or not obj.Parent or obj:FindFirstChild("XB_ESP_Marker") then 
-        return false 
-    end
-
-    -- 配置获取
-    local displayName = self.Config.DisplayNames[obj.Name] or obj.Name
-    local highlightColor = self.Config.ObjectColors[obj.Name] or self.Config.HighlightColor
-
-    -- 创建标记
-    local marker = Instance.new("BoolValue")
-    marker.Name = "XB_ESP_Marker"
-    marker.Parent = obj
-
-    -- 优化高亮（更亮 + 更低性能消耗）
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "XB_ESP_Highlight"
-    highlight.Adornee = obj
-    highlight.FillColor = Color3.new(1, 1, 1)  -- 纯白色
-    highlight.OutlineColor = Color3.new(0, 0, 0)  -- 黑色轮廓（可关闭）
-    highlight.FillTransparency = 0.3  -- 比 0.7 更亮，但比 0.1 更省性能
-    highlight.OutlineTransparency = 1  -- 完全透明轮廓（减少开销）
-    highlight.Parent = obj
-
-    -- 创建标签
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "XB_ESP_Billboard"
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-    billboard.AlwaysOnTop = true
-    billboard.Adornee = obj
-    billboard.Parent = obj
-
-    local label = Instance.new("TextLabel")
-    label.Text = displayName
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.Font = Enum.Font.SourceSansBold
-    label.TextSize = self.Config.LabelSize
-    label.TextColor3 = self.Config.LabelColor
-    label.BackgroundTransparency = 1
-    label.TextStrokeTransparency = 0.5
-    label.TextStrokeColor3 = Color3.new(0, 0, 0)
-    label.Parent = billboard
-
-    -- 存储实例
-    table.insert(self.Instances, {
-        Object = obj,
-        Marker = marker,
-        Highlight = highlight,
-        Billboard = billboard,
-        Label = label
-    })
-
-    -- 距离更新（降低频率）
-    if self.Config.ShowDistance then
-        table.insert(self.Connections, game:GetService("RunService").RenderStepped:Connect(function()
-            self:_safeCall(function()
-                if not obj or not obj.Parent then return end
-                
-                local dist = self:_getDistance(obj)
-                if dist <= self.Config.MaxDistance then
-                    label.Text = string.format("%s\n[%dm]", displayName, math.floor(dist))
-                    highlight.Enabled = true
-                    billboard.Enabled = true
-                else
-                    highlight.Enabled = false
-                    billboard.Enabled = false
+ESPTab:CreateToggle({
+    Name = "柱子透视",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if (obj.Name == "MonumentEntity" or obj.Name == "柱子") and obj:IsA("Model") then
+                    safeAddESP(obj, {
+                        Name = "柱子",
+                        Color = Color3.fromRGB(255, 182, 193)
+                    })
+                end
+            end
+            
+            local conn = workspace.DescendantAdded:Connect(function(obj)
+                if (obj.Name == "MonumentEntity" or obj.Name == "柱子") and obj:IsA("Model") then
+                    safeAddESP(obj, {
+                        Name = "柱子",
+                        Color = Color3.fromRGB(255, 182, 193)
+                    })
                 end
             end)
-        end))
-    end
-
-    return true
-end
-
-function AdvancedESP:_isTarget(obj)
-    -- 基础类型检查
-    if not obj or not obj.Parent then return false end
-    if not obj:IsA("BasePart") and not obj:IsA("Model") then return false end
-
-    -- 路径检查
-    if self.Config.SearchPath ~= "Workspace" then
-        local targetPath = self:_getFromPath(self.Config.SearchPath)
-        if not targetPath or not obj:IsDescendantOf(targetPath) then
-            return false
-        end
-    end
-
-    -- 名称匹配
-    if #self.TargetNames == 0 then return true end
-    local lowerName = obj.Name:lower()
-    
-    for _, name in ipairs(self.TargetNames) do
-        local lowerTarget = name:lower()
-        if self.Config.ExactMatch then
-            if lowerName == lowerTarget then return true end
+            
+            table.insert(ESPManager.Connections, conn)
         else
-            if lowerName:find(lowerTarget) then return true end
+            for obj in pairs(ESPManager.Objects) do
+                if (obj.Name == "MonumentEntity" or obj.Name == "柱子") then
+                    safeRemoveESP(obj)
+                end
+            end
+            
+            for i = #ESPManager.Connections, 1, -1 do
+                local conn = ESPManager.Connections[i]
+                if not conn.Connected then
+                    table.remove(ESPManager.Connections, i)
+                end
+            end
         end
     end
+})
 
-    -- 标记检查
-    if self.Config.CheckMarker then
-        return obj:FindFirstChild(self.Config.MarkerName) ~= nil
+ESPTab:CreateToggle({
+    Name = "监管透视",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if (obj.Name == "Groundskeeper" or obj.Name == "监管") and obj:IsA("Model") then
+                    safeAddESP(obj, {
+                        Name = "监管",
+                        Color = Color3.fromRGB(220, 20, 60) -- 红色
+                    })
+                end
+            end
+            
+            local conn = workspace.DescendantAdded:Connect(function(obj)
+                if (obj.Name == "Groundskeeper" or obj.Name == "监管") and obj:IsA("Model") then
+                    safeAddESP(obj, {
+                        Name = "监管",
+                        Color = Color3.fromRGB(220, 20, 60)
+                    })
+                end
+            end)
+            
+            table.insert(ESPManager.Connections, conn)
+        else
+            for obj in pairs(ESPManager.Objects) do
+                if (obj.Name == "Groundskeeper" or obj.Name == "监管") then
+                    safeRemoveESP(obj)
+                end
+            end
+          
+            for i = #ESPManager.Connections, 1, -1 do
+                local conn = ESPManager.Connections[i]
+                if not conn.Connected then
+                    table.remove(ESPManager.Connections, i)
+                end
+            end
+        end
     end
+})
 
+ESPTab:CreateToggle({
+    Name = "地刺透视",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            if workspace:FindFirstChild("CurrentRooms") then
+                for _, room in pairs(workspace.CurrentRooms:GetChildren()) do
+                    local snares = room:FindFirstChild("Snares")
+                    if snares then
+                        for _, snare in pairs(snares:GetChildren()) do
+                            if snare:IsA("BasePart") and snare.Name == "Snare" then
+                                safeAddESP(snare, {
+                                    Name = "地刺",
+                                    Color = Color3.fromRGB(144, 238, 144) 
+                                })
+                            end
+                        end
+                    end
+                end
+            end
+            
+            local conn = workspace.DescendantAdded:Connect(function(obj)
+                if obj.Name == "Snare" and obj:IsA("BasePart") then
+                    local parent = obj.Parent
+                    if parent and parent.Name == "Snares" then
+                        local grandparent = parent.Parent
+                        if grandparent and grandparent:IsA("Model") and workspace.CurrentRooms:FindFirstChild(grandparent.Name) then
+                            safeAddESP(obj, {
+                                Name = "地刺",
+                                Color = Color3.fromRGB(144, 238, 144)
+                            })
+                        end
+                    end
+                end
+            end)
+            
+            table.insert(ESPManager.Connections, conn)
+        else
+            for obj in pairs(ESPManager.Objects) do
+                if obj.Name == "Snare" then
+                    safeRemoveESP(obj)
+                end
+            end
+          
+            for i = #ESPManager.Connections, 1, -1 do
+                local conn = ESPManager.Connections[i]
+                if not conn.Connected then
+                    table.remove(ESPManager.Connections, i)
+                end
+            end
+        end
+    end
+})
+
+ESPTab:CreateToggle({
+    Name = "萝卜透视",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if (obj.Name == "Mandrake" or obj.Name == "萝卜") and obj:IsA("Model") then
+                    safeAddESP(obj, {
+                        Name = "萝卜",
+                        Color = Color3.fromRGB(255, 215, 0)
+                    })
+                end
+            end
+           
+            local conn = workspace.DescendantAdded:Connect(function(obj)
+                if (obj.Name == "Mandrake" or obj.Name == "萝卜") and obj:IsA("Model") then
+                    safeAddESP(obj, {
+                        Name = "萝卜",
+                        Color = Color3.fromRGB(255, 215, 0)
+                    })
+                end
+            end)
+            
+            table.insert(ESPManager.Connections, conn)
+        else
+            for obj in pairs(ESPManager.Objects) do
+                if (obj.Name == "Mandrake" or obj.Name == "萝卜") then
+                    safeRemoveESP(obj)
+                end
+            end
+           
+            for i = #ESPManager.Connections, 1, -1 do
+                local conn = ESPManager.Connections[i]
+                if not conn.Connected then
+                    table.remove(ESPManager.Connections, i)
+                end
+            end
+        end
+    end
+})
+
+local DoorESP = {
+    Enabled = false,
+    Doors = {},
+    Connections = {}
+}
+
+local function isValidDoor(door)
+    if not door:IsA("Model") then return false end
+    if door.Name ~= "Door" then return false end
+ 
+    local parent = door.Parent
+    while parent do
+        if parent.Name == "CurrentRooms" then
+            return true
+        end
+        parent = parent.Parent
+    end
     return false
 end
 
-function AdvancedESP:_scanAndAdd()
-    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
+local function updateDoorESP(door)
+    if not door or not door.PrimaryPart then return end
     
-    local function scan(parent)
-        for _, obj in ipairs(parent:GetChildren()) do
-            if self:_isTarget(obj) then
-                self:_createESP(obj)
-            end
-            if self.Config.ScanRecursive then
-                scan(obj)
-            end
-        end
+    local room = door:FindFirstAncestorWhichIsA("Model")
+    local roomNumber = room and room.Name or "未知"
+    
+    local isOpened = false
+    if door:FindFirstChild("Open") then
+        isOpened = door.Open.Value
     end
     
-    self:_safeCall(scan, targetPath)
-end
-
-function AdvancedESP:Start()
-    if self.Active then return end
-    self.Active = true
-    
-    -- 初始扫描（只扫一次）
-    self:_scanAndAdd()
-    
-    -- 监听新增对象（延迟加载）
-    local targetPath = self:_getFromPath(self.Config.SearchPath) or workspace
-    table.insert(self.Connections, targetPath.DescendantAdded:Connect(function(obj)
-        if self:_isTarget(obj) then
-            task.wait(self.Config.LoadWaitTime)  -- 延迟 0.5 秒再添加
-            self:_createESP(obj)
-        end
-    end))
-    
-    -- 改用 RenderStepped（比 Heartbeat 更稳定）
-    table.insert(self.Connections, game:GetService("RunService").RenderStepped:Connect(function()
-        if os.clock() - (self._lastUpdate or 0) >= self.Config.UpdateInterval then
-            self:_scanAndAdd()
-            self._lastUpdate = os.clock()
-        end
-    end))
-end
-
-function AdvancedESP:Stop()
-    if not self.Active then return end
-    self.Active = false
-    
-    -- 断开连接
-    for _, conn in ipairs(self.Connections) do
-        conn:Disconnect()
-    end
-    self.Connections = {}
-    
-    -- 清理实例
-    for _, data in ipairs(self.Instances) do
-        self:_safeCall(function()
-            for _, child in ipairs(data.Object:GetChildren()) do
-                if child.Name:find("XB_ESP_") then
-                    child:Destroy()
-                end
+    if DoorESP.Doors[door] then
+        pcall(function()
+            if ESP.Remove then
+                ESP:Remove(DoorESP.Doors[door])
             end
         end)
     end
-    self.Instances = {}
-end
-
-function AdvancedESP:SetConfig(config)
-    for k, v in pairs(config) do
-        if self.Config[k] ~= nil then
-            self.Config[k] = v
-        end
+    
+    local success, espObj = pcall(function()
+        return ESP:Add({
+            Name = "门["..roomNumber.."] "..(isOpened and "已打开" or "关闭"),
+            Model = door,
+            Color = isOpened and Color3.new(0, 1, 0) or Color3.new(1, 0, 0),
+            MaxDistance = 1000,
+            TextSize = 14,
+            ESPType = "Highlight"
+        })
+    end)
+    
+    if success then
+        DoorESP.Doors[door] = espObj
     end
-    return self
 end
 
--- =============================================
--- 保留原有的 ESP 配置（柱子、监管、门、地刺、萝卜）
--- =============================================
-local MonumentESP = AdvancedESP.new({"MonumentEntity", "柱子"})
-MonumentESP:SetConfig({
-    ScanRecursive = true,
-    MaxDistance = 500,
-    HighlightColor = Color3.fromRGB(255, 182, 193),  -- 粉色
-    LabelSize = 8,
-    ShowDistance = true,
-    DisplayNames = {
-        MonumentEntity = "柱子怪"
-    }
-})
-
-local SnareESP = AdvancedESP.new({"Snare", "地刺"})
-SnareESP:SetConfig({
-    ScanRecursive = true,
-    MaxDistance = 300,
-    HighlightColor = Color3.fromRGB(144, 238, 144),  -- 浅绿色
-    LabelSize = 8,
-    DisplayNames = {
-        Snare = "地刺"
-    }
-})
-
-local MandrakeESP = AdvancedESP.new({"Mandrake", "萝卜"})
-MandrakeESP:SetConfig({
-    ScanRecursive = true,
-    MaxDistance = 200,
-    HighlightColor = Color3.fromRGB(255, 215, 0),  -- 金色
-    CheckMarker = true,
-    MarkerName = "Body",
-    LabelSize = 8,
-    DisplayNames = {
-        Mandrake = "萝卜"
-    }
-})
-
-local DoorESP = AdvancedESP.new({"Door", "门"})
-DoorESP:SetConfig({
-    ScanRecursive = true,
-    MaxDistance = 1000,
-    HighlightColor = Color3.fromRGB(100, 149, 237),  -- 蓝色
-    LabelSize = 8,
-    CheckMarker = true,
-    MarkerName = "Attachment",
-    ExactMatch = true,
-    DisplayNames = {
-        Door = "门"
-    }
-})
-
-local GroundskeeperESP = AdvancedESP.new({"Groundskeeper", "监管"})
-GroundskeeperESP:SetConfig({
-    ScanRecursive = true,
-    MaxDistance = 400,
-    HighlightColor = Color3.fromRGB(220, 20, 60),  -- 红色
-    ExactMatch = true,
-    LabelSize = 8,
-    DisplayNames = {
-        Groundskeeper = "监管"
-    }
-})
-
--- =============================================
--- 保留原有的 ESP Toggle 界面（不要动这部分）
--- =============================================
-local ESPTab = Window:CreateTab("透视功能", 4483362458)
-
-local function createESPToggle(name, esp)
-    return ESPTab:CreateToggle({
-        Name = name,
-        CurrentValue = false,
-        Callback = function(Value)
-            if Value then 
-                esp:Start() 
-                Rayfield:Notify({
-                    Title = "ESP 已开启",
-                    Content = name.."透视激活",
-                    Duration = 2
-                })
-            else 
-                esp:Stop()
+local function scanAllDoors()
+    if not workspace:FindFirstChild("CurrentRooms") then return end
+    
+    for _, room in pairs(workspace.CurrentRooms:GetChildren()) do
+        if room:FindFirstChild("Door") then
+            local door = room.Door
+            if isValidDoor(door) then
+                updateDoorESP(door)
             end
         end
-    })
+    end
 end
 
-createESPToggle("柱子透视", MonumentESP)
-createESPToggle("监管透视", GroundskeeperESP)
-createESPToggle("门透视", DoorESP)
-createESPToggle("地刺透视", SnareESP)
-createESPToggle("萝卜透视", MandrakeESP)
+ESPTab:CreateToggle({
+    Name = "门透视系统",
+    CurrentValue = false,
+    Callback = function(Value)
+        DoorESP.Enabled = Value
+        if Value then
+            scanAllDoors()
+            
+            DoorESP.Connections["RoomAdded"] = workspace.CurrentRooms.ChildAdded:Connect(function(room)
+                task.wait(1)
+                if room:FindFirstChild("Door") then
+                    scanAllDoors()
+                end
+            end)
+         
+            for door in pairs(DoorESP.Doors) do
+                if door:FindFirstChild("Open") then
+                    DoorESP.Connections["Door_"..door:GetDebugId()] = door.Open:GetPropertyChangedSignal("Value"):Connect(function()
+                        updateDoorESP(door)
+                    end)
+                end
+            end
+        else
+        
+            for door, esp in pairs(DoorESP.Doors) do
+                pcall(function()
+                    if ESP.Remove then
+                        ESP:Remove(esp)
+                    end
+                end)
+            end
+            DoorESP.Doors = {}
+            
+            for _, conn in pairs(DoorESP.Connections) do
+                pcall(conn.Disconnect, conn)
+            end
+            DoorESP.Connections = {}
+        end
+    end
+})
 
-local OtherTab = Window:CreateTab("其它",nil)
+local GateESP = {
+    Enabled = false,
+    Gates = {},
+    Buttons = {},
+    Connections = {}
+}
 
-local Button = OtherTab:CreateButton({
+local function updateGateESP(gate)
+    if not gate or not gate.PrimaryPart then return end
+    
+    if GateESP.Gates[gate] then
+        pcall(function()
+            if ESP.Remove then
+                ESP:Remove(GateESP.Gates[gate])
+            end
+        end)
+    end
+    
+    local success, espObj = pcall(function()
+        return ESP:Add({
+            Name = "铁门",
+            Model = gate,
+            Color = Color3.new(0, 0.5, 1),
+            MaxDistance = 1000,
+            TextSize = 14
+        })
+    end)
+    
+    if success then
+        GateESP.Gates[gate] = espObj
+    end
+end
+
+local function updateButtonESP(button)
+    if not button then return end
+    
+    if GateESP.Buttons[button] then
+        pcall(function()
+            if ESP.Remove then
+                ESP:Remove(GateESP.Buttons[button])
+            end
+        end)
+    end
+    
+    local success, espObj = pcall(function()
+        return ESP:Add({
+            Name = "按钮",
+            Model = button,
+            Color = Color3.new(1, 1, 0),
+            MaxDistance = 500,
+            TextSize = 12
+        })
+    end)
+    
+    if success then
+        GateESP.Buttons[button] = espObj
+    end
+end
+
+local function scanAllGates()
+    if not workspace:FindFirstChild("CurrentRooms") then return end
+    
+    for _, room in pairs(workspace.CurrentRooms:GetChildren()) do
+        local assets = room:FindFirstChild("Assets")
+        if assets then
+            local gateSetup = assets:FindFirstChild("GateSetup")
+            if gateSetup then
+                local gate = gateSetup:FindFirstChild("GardenGate")
+                if gate and gate:IsA("Model") then
+                    updateGateESP(gate)
+                end
+              
+                local button = gateSetup:FindFirstChild("GardenGateButton")
+                if button and button:IsA("BasePart") then
+                    updateButtonESP(button)
+                end
+            end
+        end
+    end
+end
+
+ESPTab:CreateToggle({
+    Name = "铁门和按钮透视",
+    CurrentValue = false,
+    Callback = function(Value)
+        GateESP.Enabled = Value
+        if Value then
+            scanAllGates()
+            
+            GateESP.Connections["RoomAdded"] = workspace.CurrentRooms.ChildAdded:Connect(function(room)
+                task.wait(1)
+                scanAllGates()
+            end)
+        else
+            for gate, esp in pairs(GateESP.Gates) do
+                pcall(function()
+                    if ESP.Remove then
+                        ESP:Remove(esp)
+                    end
+                end)
+            end
+            GateESP.Gates = {}
+            
+            for button, esp in pairs(GateESP.Buttons) do
+                pcall(function()
+                    if ESP.Remove then
+                        ESP:Remove(esp)
+                    end
+                end)
+            end
+            GateESP.Buttons = {}
+            
+            for _, conn in pairs(GateESP.Connections) do
+                pcall(conn.Disconnect, conn)
+            end
+            GateESP.Connections = {}
+        end
+    end
+})
+
+local OtherTab = Window:CreateTab("其他")
+
+local function loadTool(name, url)
+    Rayfield:Notify({
+        Title = name.."加载中...",
+        Content = "请稍候",
+        Duration = 2
+    })
+    
+    local start = os.clock()
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet(url, true))()
+    end)
+    
+    if success then
+        Rayfield:Notify({
+            Title = name.."已加载",
+            Content = string.format("加载耗时: %.2f秒", os.clock() - start),
+            Duration = 3
+        })
+    else
+        Rayfield:Notify({
+            Title = "加载失败",
+            Content = name.."错误: "..tostring(result),
+            Duration = 5
+        })
+    end
+end
+
+OtherTab:CreateButton({
     Name = "Dex",
     Callback = function()
-        loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/main/dex.lua'))()
-    end,
+        loadTool("Dex", 'https://raw.githubusercontent.com/infyiff/backup/main/dex.lua')
+    end
 })
 
-local Button = OtherTab:CreateButton({
+OtherTab:CreateButton({
     Name = "Spy",
     Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua"))()
-    end,
+        loadTool("Spy", "https://raw.githubusercontent.com/renlua/Script-Tutorial/refs/heads/main/Spy.lua")
+    end
 })
 
-local Button = OtherTab:CreateButton({
+OtherTab:CreateButton({
     Name = "IY",
     Callback = function()
-        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
-    end,
+        loadTool("IY", 'https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source')
+    end
 })
+
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+    if player == LocalPlayer then
+        if speedConnection then speedConnection:Disconnect() end
+        if cameraConnection then cameraConnection:Disconnect() end
+        if brightnessConnection then brightnessConnection:Disconnect() end
+        if surgeConnection then surgeConnection:Disconnect() end
+        
+        for obj in pairs(ESPManager.Objects) do
+            safeRemoveESP(obj)
+        end
+        
+        for door, esp in pairs(DoorESP.Doors) do
+            pcall(function()
+                if ESP.Remove then
+                    ESP:Remove(esp)
+                end
+            end)
+        end
+        
+        for gate, esp in pairs(GateESP.Gates) do
+            pcall(function()
+                if ESP.Remove then
+                    ESP:Remove(esp)
+                end
+            end)
+        end
+        
+        for button, esp in pairs(GateESP.Buttons) do
+            pcall(function()
+                if ESP.Remove then
+                    ESP:Remove(esp)
+                end
+            end)
+        end
+        
+        Lighting.Brightness = 1
+        Lighting.Ambient = Color3.new(0.5, 0.5, 0.5)
+        Lighting.OutdoorAmbient = Color3.new(0.5, 0.5, 0.5)
+    end
+end)
 
 elseif game.PlaceId == 95702387256198 then
 
@@ -774,11 +814,14 @@ elseif game.PlaceId == 12552538292 then
        Content = "检测到压力,已自动打开脚本",
         Duration = 5
     })
+    
 else
     Rayfield:Notify({
         Title = "XB脚本",
         Content = "没有这服务器的脚本,需要请加群249592274",
         Duration = 5
     })
-    setClipborder("QQ:249592274")
+    wait(5)
+    setclipboard("加Q:249592274")
+    LocalPlayer:Kick("请更换服务器或脚本")
 end
