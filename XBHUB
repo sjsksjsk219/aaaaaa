@@ -216,7 +216,7 @@ if not success or not ESP then
         Add = function() return {} end,
         Remove = function() end,
         Initialize = function() end
-    end
+     }
     warn("ESP加载失败，功能受限:", err)
 end
 
