@@ -6,7 +6,7 @@ local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 
 -- 创建主窗口
 local Window = Library:CreateWindow({
-    Title = 'THE OUTDOORS 高级脚本',
+    Title = 'THE OUTDOORS',
     Center = true,
     AutoShow = true,
     Resizable = true,
@@ -194,7 +194,7 @@ MainGroup:AddToggle('DeleteSurge', {
                 end
             end)
             
-            Library:Notify("删除闪电", string.format("已删除 %d 个闪电, 开始持续删除", count))
+            Library:Notify("删除闪电", string.format("已删除 %d 个闪电, 开始持续删除", count),5)
         else
             if surgeConnection then
                 surgeConnection:Disconnect()
@@ -691,6 +691,159 @@ ESPGroup:AddToggle('GateESP', {
                 pcall(conn.Disconnect, conn)
             end
             GateESP.Connections = {}
+        end
+    end
+})
+
+-- 在ESPGroup中添加35门闸机和Boss透视功能
+ESPGroup:AddToggle('Gate35ESP', {
+    Text = '35门闸机透视',
+    Default = false,
+    Tooltip = '显示35门闸机位置',
+    Callback = function(Value)
+        if Value then
+            -- 扫描35门闸机
+            local room35 = workspace.CurrentRooms:FindFirstChild("35")
+            if room35 then
+                local assets = room35:FindFirstChild("Assets")
+                if assets then
+                    local gateSetup = assets:FindFirstChild("GateSetup")
+                    if gateSetup then
+                        -- 铁门
+                        local gate = gateSetup:FindFirstChild("GardenGate")
+                        if gate and gate:IsA("Model") then
+                            safeAddESP(gate, {
+                                Name = "35门闸机",
+                                Color = Color3.new(0, 0.5, 1), -- 蓝色
+                                MaxDistance = 1000,
+                                TextSize = 14
+                            })
+                        end
+                        
+                        -- 按钮
+                        local button = gateSetup:FindFirstChild("GardenGateButton")
+                        if button and button:IsA("BasePart") then
+                            safeAddESP(button, {
+                                Name = "35门按钮",
+                                Color = Color3.new(1, 1, 0), -- 黄色
+                                MaxDistance = 500,
+                                TextSize = 12
+                            })
+                        end
+                    end
+                end
+            end
+            
+            -- 监听35门变化
+            local conn = workspace.CurrentRooms.ChildAdded:Connect(function(room)
+                if room.Name == "35" then
+                    task.wait(1) -- 等待房间加载完成
+                    local assets = room:FindFirstChild("Assets")
+                    if assets then
+                        local gateSetup = assets:FindFirstChild("GateSetup")
+                        if gateSetup then
+                            -- 铁门
+                            local gate = gateSetup:FindFirstChild("GardenGate")
+                            if gate and gate:IsA("Model") then
+                                safeAddESP(gate, {
+                                    Name = "35门闸机",
+                                    Color = Color3.new(0, 0.5, 1),
+                                    MaxDistance = 1000,
+                                    TextSize = 14
+                                })
+                            end
+                            
+                            -- 按钮
+                            local button = gateSetup:FindFirstChild("GardenGateButton")
+                            if button and button:IsA("BasePart") then
+                                safeAddESP(button, {
+                                    Name = "35门按钮",
+                                    Color = Color3.new(1, 1, 0),
+                                    MaxDistance = 500,
+                                    TextSize = 12
+                                })
+                            end
+                        end
+                    end
+                end
+            end)
+            
+            table.insert(ESPManager.Connections, conn)
+        else
+            -- 清除35门ESP
+            for obj, esp in pairs(ESPManager.Objects) do
+                if obj.Name == "GardenGate" or obj.Name == "GardenGateButton" then
+                    safeRemoveESP(obj)
+                end
+            end
+            
+            -- 断开连接
+            for i = #ESPManager.Connections, 1, -1 do
+                local conn = ESPManager.Connections[i]
+                if not conn.Connected then
+                    table.remove(ESPManager.Connections, i)
+                end
+            end
+        end
+    end
+})
+
+ESPGroup:AddToggle('BossESP', {
+    Text = '35门Boss透视',
+    Default = false,
+    Tooltip = '显示35门Boss位置',
+    Callback = function(Value)
+        if Value then
+            -- 扫描Boss
+            local room35 = workspace.CurrentRooms:FindFirstChild("35")
+            if room35 then
+                for _, obj in pairs(room35:GetDescendants()) do
+                    if (obj.Name == "Boss" or obj.Name == "FinalMonster") and obj:IsA("Model") then
+                        safeAddESP(obj, {
+                            Name = "Boss",
+                            Color = Color3.fromRGB(255, 0, 0), -- 红色
+                            MaxDistance = 1000,
+                            TextSize = 16
+                        })
+                    end
+                end
+            end
+            
+            -- 监听Boss出现
+            local conn = workspace.DescendantAdded:Connect(function(obj)
+                local parent = obj.Parent
+                while parent do
+                    if parent.Name == "35" then
+                        if (obj.Name == "Boss" or obj.Name == "FinalMonster") and obj:IsA("Model") then
+                            safeAddESP(obj, {
+                                Name = "Boss",
+                                Color = Color3.fromRGB(255, 0, 0),
+                                MaxDistance = 1000,
+                                TextSize = 16
+                            })
+                        end
+                        break
+                    end
+                    parent = parent.Parent
+                end
+            end)
+            
+            table.insert(ESPManager.Connections, conn)
+        else
+            -- 清除Boss ESP
+            for obj, esp in pairs(ESPManager.Objects) do
+                if obj.Name == "Boss" or obj.Name == "FinalMonster" then
+                    safeRemoveESP(obj)
+                end
+            end
+            
+            -- 断开连接
+            for i = #ESPManager.Connections, 1, -1 do
+                local conn = ESPManager.Connections[i]
+                if not conn.Connected then
+                    table.remove(ESPManager.Connections, i)
+                end
+            end
         end
     end
 })
