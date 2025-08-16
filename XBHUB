@@ -1,12 +1,13 @@
+if Workspace:FindFirstChild("TreeCellGroup") then
+
 local repo = 'https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/'
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
 local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
 local DeleteSnaresConnection = nil
 
-
 local Window = Library:CreateWindow({
-    Title = 'THE OUTDOORS 高级脚本',
+    Title = 'THE OUTDOORS',
     Center = true,
     AutoShow = true,
     TabPadding = 8,
@@ -57,7 +58,7 @@ local function updateBrightness()
 end
 
 MainGroup:AddToggle('HighBrightness', {
-    Text = '开启高亮模式',
+    Text = '高亮',
     Default = false,
     Callback = function(Value)
         highBrightnessEnabled = Value
@@ -92,7 +93,7 @@ local speedConnection = RunService.Heartbeat:Connect(function()
 end)
 
 MainGroup:AddToggle('SpeedHack', {
-    Text = '开启速度调整',
+    Text = '开启速度',
     Default = false,
     Callback = function(Value)
         speedHackEnabled = Value
@@ -122,7 +123,7 @@ local cameraHeightOffset = 1.5
 local cameraConnection
 
 MainGroup:AddSlider('ThirdPersonDistance', {
-    Text = '第三人称视角距离',
+    Text = '视角调整',
     Default = 0,
     Min = 0,
     Max = 10,
@@ -473,7 +474,7 @@ ESPGroup:AddToggle('MandrakeESP', {
 })
 
 ESPGroup:AddToggle('Gate35ESP', {
-    Text = '35门闸机透视',
+    Text = '闸机透视',
     Default = false,
     Callback = function(Value)
         if Value then
@@ -486,7 +487,7 @@ ESPGroup:AddToggle('Gate35ESP', {
                         for _, vine in ipairs(giantVines:GetChildren()) do
                             if vine.Name == "AlaskanVineSet" and vine:IsA("Model") then
                                 safeAddESP(vine, {
-                                    Name = "35门闸机",
+                                    Name = "闸机",
                                     Color = Color3.new(0.2, 0.8, 0.2),
                                     MaxDistance = 1000,
                                     TextSize = 14,
@@ -508,7 +509,7 @@ ESPGroup:AddToggle('Gate35ESP', {
                             for _, vine in ipairs(giantVines:GetChildren()) do
                                 if vine.Name == "AlaskanVineSet" and vine:IsA("Model") then
                                     safeAddESP(vine, {
-                                        Name = "35门闸机",
+                                        Name = "闸机",
                                         Color = Color3.new(0.2, 0.8, 0.2),
                                         MaxDistance = 1000,
                                         TextSize = 14,
@@ -540,7 +541,7 @@ ESPGroup:AddToggle('Gate35ESP', {
 })
 
 ESPGroup:AddToggle('BossESP', {
-    Text = '35门Boss透视',
+    Text = 'Boss透视',
     Default = false,
     Callback = function(Value)
         if Value then
@@ -674,7 +675,7 @@ local function scanAllDoors()
 end
 
 ESPGroup:AddToggle('DoorESP', {
-    Text = '门透视系统',
+    Text = '门透视',
     Default = false,
     Callback = function(Value)
         DoorESP.Enabled = Value
@@ -954,10 +955,11 @@ Library:OnUnload(function()
     WatermarkConnection:Disconnect()
 end)
 
-SafeNotify("XB脚本", "检测中")
+SafeNotify("XB脚本", "检测中",5)
 
-if game.PlaceId == 6839171747 then
-    SafeNotify("XB脚本", "检测到THE OUTDOORS,已启动脚本")
+elseif Workspace:FindFirstChild("new tool") then
+    SafeNotify("XB脚本","检测到The Backdoors,已自动开启脚本",5)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/sjsksjsk219/aaaaaa/refs/heads/main/The_Backdoors"))
 elseif game.PlaceId == 95702387256198 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/sjsksjsk219/aaaaaa/refs/heads/main/偷一辆车"))()
     SafeNotify("XB脚本", "检测到偷一辆车,已自动开启脚本")
@@ -971,5 +973,5 @@ else
     SafeNotify("XB脚本", "没有这服务器的脚本,需要请加群249592274", 5)
     task.wait(5)
     setclipboard("加Q:249592274")
-    LocalPlayer:Kick("请更换服务器或脚本")
+    game.GetService("Players").LocalPlayer:Kick("请更换服务器或脚本")
 end
