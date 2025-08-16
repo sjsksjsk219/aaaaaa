@@ -1,28 +1,25 @@
--- 加载Linoria UI库
 local repo = 'https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/'
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
 local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+local DeleteSnaresConnection = nil
 
--- 创建主窗口
+
 local Window = Library:CreateWindow({
-    Title = 'THE OUTDOORS',
+    Title = 'THE OUTDOORS 高级脚本',
     Center = true,
     AutoShow = true,
-    Resizable = true,
-    ShowCustomCursor = true,
     TabPadding = 8,
     MenuFadeTime = 0.2
 })
 
--- 创建标签页
 local Tabs = {
     Main = Window:AddTab('主要功能'),
     ESP = Window:AddTab('透视功能'),
-    Other = Window:AddTab('其他工具')
+    Other = Window:AddTab('其他工具'),
+    Settings = Window:AddTab('设置')
 }
 
--- 初始化变量
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
@@ -31,10 +28,18 @@ local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 
--- 主要功能组
+local function SafeNotify(Title, Content, Duration)
+    local Notify = Library:Notify(Title, Content, Duration or 5)
+    if Duration then
+        task.delay(Duration, function()
+            if Notify then Notify:Destroy() end
+        end)
+    end
+    return Notify
+end
+
 local MainGroup = Tabs.Main:AddLeftGroupbox('主要功能')
 
--- 亮度设置
 local highBrightnessEnabled = false
 local brightnessLevel = 1
 local brightnessConnection
@@ -54,14 +59,9 @@ end
 MainGroup:AddToggle('HighBrightness', {
     Text = '开启高亮模式',
     Default = false,
-    Tooltip = '提高游戏整体亮度',
     Callback = function(Value)
         highBrightnessEnabled = Value
-        if brightnessConnection then
-            brightnessConnection:Disconnect()
-            brightnessConnection = nil
-        end
-        
+        if brightnessConnection then brightnessConnection:Disconnect() end
         if Value then
             brightnessConnection = RunService.RenderStepped:Connect(updateBrightness)
         end
@@ -82,11 +82,9 @@ MainGroup:AddSlider('BrightnessLevel', {
     end
 })
 
--- 速度设置
 local speedHackEnabled = false
 local targetSpeed = 16
 local currentMultiplier = 1
-
 local speedConnection = RunService.Heartbeat:Connect(function()
     if speedHackEnabled and Humanoid then
         Humanoid.WalkSpeed = targetSpeed
@@ -96,15 +94,12 @@ end)
 MainGroup:AddToggle('SpeedHack', {
     Text = '开启速度调整',
     Default = false,
-    Tooltip = '提高移动速度',
     Callback = function(Value)
         speedHackEnabled = Value
         if not Value and Humanoid then 
             Humanoid.WalkSpeed = 16 
             currentMultiplier = 1
             targetSpeed = 16
-        else
-            Humanoid.WalkSpeed = targetSpeed
         end
     end
 })
@@ -119,13 +114,9 @@ MainGroup:AddSlider('SpeedMultiplier', {
     Callback = function(Value)
         currentMultiplier = Value
         targetSpeed = 16 * Value
-        if speedHackEnabled and Humanoid then
-            Humanoid.WalkSpeed = targetSpeed
-        end
     end
 })
 
--- 第三人称视角
 local cameraOffset = 0
 local cameraHeightOffset = 1.5
 local cameraConnection
@@ -140,7 +131,6 @@ MainGroup:AddSlider('ThirdPersonDistance', {
     Callback = function(Value)
         cameraOffset = Value
         if cameraConnection then cameraConnection:Disconnect() end
-        
         if Value > 0 then
             cameraConnection = RunService.RenderStepped:Connect(function()
                 local character = LocalPlayer.Character
@@ -159,14 +149,12 @@ MainGroup:AddSlider('ThirdPersonDistance', {
     end
 })
 
--- 删除闪电功能
 local deleteSurgeEnabled = false
 local surgeConnection
 
 MainGroup:AddToggle('DeleteSurge', {
     Text = '删除闪电(Beta)',
     Default = false,
-    Tooltip = '持续删除游戏中的闪电效果',
     Callback = function(Value)
         deleteSurgeEnabled = Value
         if Value then
@@ -194,19 +182,55 @@ MainGroup:AddToggle('DeleteSurge', {
                 end
             end)
             
-            Library:Notify("删除闪电", string.format("已删除 %d 个闪电, 开始持续删除", count),5)
+            SafeNotify("删除闪电", string.format("已删除 %d 个闪电", count), 3)
+        elseif surgeConnection then
+            surgeConnection:Disconnect()
+        end
+    end
+})
+
+MainGroup:AddToggle('DeleteSnares', {
+    Text = "禁用地刺",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            local function removeHitboxes()
+                for _, room in ipairs(workspace.CurrentRooms:GetChildren()) do
+                    local snares = room:FindFirstChild("Snares")
+                    if snares then
+                        for _, snare in ipairs(snares:GetChildren()) do
+                            if snare.Name == "Snare" then
+                                local hitbox = snare:FindFirstChild("Hitbox")
+                                if hitbox and hitbox:IsA("BasePart") then
+                                    hitbox:Destroy()
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            removeHitboxes()
+            
+            local connection = workspace.CurrentRooms.ChildAdded:Connect(function(room)
+                task.wait(1)
+                removeHitboxes()
+            end)
+           
+            DeleteSnaresConnection = connection
         else
-            if surgeConnection then
-                surgeConnection:Disconnect()
-                surgeConnection = nil
+            if DeleteSnaresConnection then
+                DeleteSnaresConnection:Disconnect()
+                DeleteSnaresConnection = nil
             end
         end
     end
 })
 
--- 安全加载ESP库
+local ESPGroup = Tabs.ESP:AddLeftGroupbox('透视功能')
+
 local ESP
-local success, err = pcall(function()
+success, err = pcall(function()
     local ESPLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/MSESP/refs/heads/main/source.luau", true))()
     ESP = getgenv().mstudio45_ESP or ESPLib
 end)
@@ -216,8 +240,8 @@ if not success or not ESP then
         Add = function() return {} end,
         Remove = function() end,
         Initialize = function() end
-     }
-    warn("ESP加载失败，功能受限:", err)
+    }
+    SafeNotify("ESP加载失败", "功能受限: "..tostring(err))
 end
 
 pcall(function()
@@ -237,8 +261,6 @@ pcall(function()
     })
 end)
 
--- 透视功能组
-local ESPGroup = Tabs.ESP:AddLeftGroupbox('透视功能')
 local ESPManager = {
     Objects = {},
     Connections = {}
@@ -278,11 +300,58 @@ local function safeRemoveESP(obj)
     end
 end
 
--- 柱子透视
+ESPGroup:AddToggle('SnareESP', {
+    Text = '地刺透视',
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            for _, room in pairs(workspace.CurrentRooms:GetChildren()) do
+                local snares = room:FindFirstChild("Snares")
+                if snares then
+                    for _, snare in pairs(snares:GetChildren()) do
+                        if snare:IsA("BasePart") and snare.Name == "Snare" then
+                            safeAddESP(snare, {
+                                Name = "地刺",
+                                Color = Color3.fromRGB(144, 238, 144)
+                            })
+                        end
+                    end
+                end
+            end
+            
+            local conn = workspace.DescendantAdded:Connect(function(obj)
+                if obj.Name == "Snare" and obj:IsA("BasePart") then
+                    local parent = obj.Parent
+                    if parent and parent.Name == "Snares" then
+                        safeAddESP(obj, {
+                            Name = "地刺",
+                            Color = Color3.fromRGB(144, 238, 144)
+                        })
+                    end
+                end
+            end)
+            
+            table.insert(ESPManager.Connections, conn)
+        else
+            for obj in pairs(ESPManager.Objects) do
+                if obj.Name == "Snare" then
+                    safeRemoveESP(obj)
+                end
+            end
+            
+            for i = #ESPManager.Connections, 1, -1 do
+                local conn = ESPManager.Connections[i]
+                if not conn.Connected then
+                    table.remove(ESPManager.Connections, i)
+                end
+            end
+        end
+    end
+})
+
 ESPGroup:AddToggle('PillarESP', {
     Text = '柱子透视',
     Default = false,
-    Tooltip = '显示柱子位置',
     Callback = function(Value)
         if Value then
             for _, obj in pairs(workspace:GetDescendants()) do
@@ -321,11 +390,9 @@ ESPGroup:AddToggle('PillarESP', {
     end
 })
 
--- 监管透视
 ESPGroup:AddToggle('KeeperESP', {
     Text = '监管透视',
     Default = false,
-    Tooltip = '显示监管位置',
     Callback = function(Value)
         if Value then
             for _, obj in pairs(workspace:GetDescendants()) do
@@ -364,67 +431,9 @@ ESPGroup:AddToggle('KeeperESP', {
     end
 })
 
--- 地刺透视
-ESPGroup:AddToggle('SnareESP', {
-    Text = '地刺透视',
-    Default = false,
-    Tooltip = '显示地刺位置',
-    Callback = function(Value)
-        if Value then
-            if workspace:FindFirstChild("CurrentRooms") then
-                for _, room in pairs(workspace.CurrentRooms:GetChildren()) do
-                    local snares = room:FindFirstChild("Snares")
-                    if snares then
-                        for _, snare in pairs(snares:GetChildren()) do
-                            if snare:IsA("BasePart") and snare.Name == "Snare" then
-                                safeAddESP(snare, {
-                                    Name = "地刺",
-                                    Color = Color3.fromRGB(144, 238, 144) 
-                                })
-                            end
-                        end
-                    end
-                end
-            end
-            
-            local conn = workspace.DescendantAdded:Connect(function(obj)
-                if obj.Name == "Snare" and obj:IsA("BasePart") then
-                    local parent = obj.Parent
-                    if parent and parent.Name == "Snares" then
-                        local grandparent = parent.Parent
-                        if grandparent and grandparent:IsA("Model") and workspace.CurrentRooms:FindFirstChild(grandparent.Name) then
-                            safeAddESP(obj, {
-                                Name = "地刺",
-                                Color = Color3.fromRGB(144, 238, 144)
-                            })
-                        end
-                    end
-                end
-            end)
-            
-            table.insert(ESPManager.Connections, conn)
-        else
-            for obj in pairs(ESPManager.Objects) do
-                if obj.Name == "Snare" then
-                    safeRemoveESP(obj)
-                end
-            end
-            
-            for i = #ESPManager.Connections, 1, -1 do
-                local conn = ESPManager.Connections[i]
-                if not conn.Connected then
-                    table.remove(ESPManager.Connections, i)
-                end
-            end
-        end
-    end
-})
-
--- 萝卜透视
 ESPGroup:AddToggle('MandrakeESP', {
     Text = '萝卜透视',
     Default = false,
-    Tooltip = '显示萝卜位置',
     Callback = function(Value)
         if Value then
             for _, obj in pairs(workspace:GetDescendants()) do
@@ -463,7 +472,139 @@ ESPGroup:AddToggle('MandrakeESP', {
     end
 })
 
--- 门透视系统
+ESPGroup:AddToggle('Gate35ESP', {
+    Text = '35门闸机透视',
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            local room35 = workspace.CurrentRooms:FindFirstChild("35")
+            if room35 then
+                local mazeContents = room35:FindFirstChild("MazeContents")
+                if mazeContents then
+                    local giantVines = mazeContents:FindFirstChild("GiantVines")
+                    if giantVines then
+                        for _, vine in ipairs(giantVines:GetChildren()) do
+                            if vine.Name == "AlaskanVineSet" and vine:IsA("Model") then
+                                safeAddESP(vine, {
+                                    Name = "35门闸机",
+                                    Color = Color3.new(0.2, 0.8, 0.2),
+                                    MaxDistance = 1000,
+                                    TextSize = 14,
+                                    ESPType = "Highlight"
+                                })
+                            end
+                        end
+                    end
+                end
+            end
+            
+            local conn = workspace.CurrentRooms.ChildAdded:Connect(function(room)
+                if room.Name == "35" then
+                    task.wait(2)
+                    local mazeContents = room:FindFirstChild("MazeContents")
+                    if mazeContents then
+                        local giantVines = mazeContents:FindFirstChild("GiantVines")
+                        if giantVines then
+                            for _, vine in ipairs(giantVines:GetChildren()) do
+                                if vine.Name == "AlaskanVineSet" and vine:IsA("Model") then
+                                    safeAddESP(vine, {
+                                        Name = "35门闸机",
+                                        Color = Color3.new(0.2, 0.8, 0.2),
+                                        MaxDistance = 1000,
+                                        TextSize = 14,
+                                        ESPType = "Highlight"
+                                    })
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+            
+            table.insert(ESPManager.Connections, conn)
+        else
+            for obj, esp in pairs(ESPManager.Objects) do
+                if obj.Name == "AlaskanVineSet" then
+                    safeRemoveESP(obj)
+                end
+            end
+            
+            for i = #ESPManager.Connections, 1, -1 do
+                local conn = ESPManager.Connections[i]
+                if not conn.Connected then
+                    table.remove(ESPManager.Connections, i)
+                end
+            end
+        end
+    end
+})
+
+ESPGroup:AddToggle('BossESP', {
+    Text = '35门Boss透视',
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            local room35 = workspace.CurrentRooms:FindFirstChild("35")
+            if room35 then
+                local mazeContents = room35:FindFirstChild("MazeContents")
+                if mazeContents then
+                    local boss = mazeContents:FindFirstChild("LiveEntityBramble")
+                    if boss and boss:IsA("Model") then
+                        safeAddESP(boss, {
+                            Name = "最终Boss",
+                            Color = Color3.fromRGB(255, 50, 50),
+                            MaxDistance = 1500,
+                            TextSize = 18,
+                            ESPType = "Highlight",
+                            FillTransparency = 0.5,
+                            OutlineTransparency = 0.8
+                        })
+                    end
+                end
+            end
+            
+            local conn = workspace.DescendantAdded:Connect(function(obj)
+                if obj.Name == "LiveEntityBramble" and obj:IsA("Model") then
+                    local parent = obj.Parent
+                    while parent do
+                        if parent.Name == "MazeContents" then
+                            local grandparent = parent.Parent
+                            if grandparent and grandparent.Name == "35" then
+                                safeAddESP(obj, {
+                                    Name = "最终Boss",
+                                    Color = Color3.fromRGB(255, 50, 50),
+                                    MaxDistance = 1500,
+                                    TextSize = 18,
+                                    ESPType = "Highlight",
+                                    FillTransparency = 0.5,
+                                    OutlineTransparency = 0.8
+                                })
+                            end
+                            break
+                        end
+                        parent = parent.Parent
+                    end
+                end
+            end)
+            
+            table.insert(ESPManager.Connections, conn)
+        else
+            for obj, esp in pairs(ESPManager.Objects) do
+                if obj.Name == "LiveEntityBramble" then
+                    safeRemoveESP(obj)
+                end
+            end
+            
+            for i = #ESPManager.Connections, 1, -1 do
+                local conn = ESPManager.Connections[i]
+                if not conn.Connected then
+                    table.remove(ESPManager.Connections, i)
+                end
+            end
+        end
+    end
+})
+
 local DoorESP = {
     Enabled = false,
     Doors = {},
@@ -535,7 +676,6 @@ end
 ESPGroup:AddToggle('DoorESP', {
     Text = '门透视系统',
     Default = false,
-    Tooltip = '显示门状态',
     Callback = function(Value)
         DoorESP.Enabled = Value
         if Value then
@@ -573,7 +713,6 @@ ESPGroup:AddToggle('DoorESP', {
     end
 })
 
--- 铁门和按钮透视
 local GateESP = {
     Enabled = false,
     Gates = {},
@@ -658,7 +797,6 @@ end
 ESPGroup:AddToggle('GateESP', {
     Text = '铁门和按钮透视',
     Default = false,
-    Tooltip = '显示铁门和按钮位置',
     Callback = function(Value)
         GateESP.Enabled = Value
         if Value then
@@ -695,164 +833,10 @@ ESPGroup:AddToggle('GateESP', {
     end
 })
 
--- 在ESPGroup中添加35门闸机和Boss透视功能
-ESPGroup:AddToggle('Gate35ESP', {
-    Text = '35门闸机透视',
-    Default = false,
-    Tooltip = '显示35门闸机位置',
-    Callback = function(Value)
-        if Value then
-            -- 扫描35门闸机
-            local room35 = workspace.CurrentRooms:FindFirstChild("35")
-            if room35 then
-                local assets = room35:FindFirstChild("Assets")
-                if assets then
-                    local gateSetup = assets:FindFirstChild("GateSetup")
-                    if gateSetup then
-                        -- 铁门
-                        local gate = gateSetup:FindFirstChild("GardenGate")
-                        if gate and gate:IsA("Model") then
-                            safeAddESP(gate, {
-                                Name = "35门闸机",
-                                Color = Color3.new(0, 0.5, 1), -- 蓝色
-                                MaxDistance = 1000,
-                                TextSize = 14
-                            })
-                        end
-                        
-                        -- 按钮
-                        local button = gateSetup:FindFirstChild("GardenGateButton")
-                        if button and button:IsA("BasePart") then
-                            safeAddESP(button, {
-                                Name = "35门按钮",
-                                Color = Color3.new(1, 1, 0), -- 黄色
-                                MaxDistance = 500,
-                                TextSize = 12
-                            })
-                        end
-                    end
-                end
-            end
-            
-            -- 监听35门变化
-            local conn = workspace.CurrentRooms.ChildAdded:Connect(function(room)
-                if room.Name == "35" then
-                    task.wait(1) -- 等待房间加载完成
-                    local assets = room:FindFirstChild("Assets")
-                    if assets then
-                        local gateSetup = assets:FindFirstChild("GateSetup")
-                        if gateSetup then
-                            -- 铁门
-                            local gate = gateSetup:FindFirstChild("GardenGate")
-                            if gate and gate:IsA("Model") then
-                                safeAddESP(gate, {
-                                    Name = "35门闸机",
-                                    Color = Color3.new(0, 0.5, 1),
-                                    MaxDistance = 1000,
-                                    TextSize = 14
-                                })
-                            end
-                            
-                            -- 按钮
-                            local button = gateSetup:FindFirstChild("GardenGateButton")
-                            if button and button:IsA("BasePart") then
-                                safeAddESP(button, {
-                                    Name = "35门按钮",
-                                    Color = Color3.new(1, 1, 0),
-                                    MaxDistance = 500,
-                                    TextSize = 12
-                                })
-                            end
-                        end
-                    end
-                end
-            end)
-            
-            table.insert(ESPManager.Connections, conn)
-        else
-            -- 清除35门ESP
-            for obj, esp in pairs(ESPManager.Objects) do
-                if obj.Name == "GardenGate" or obj.Name == "GardenGateButton" then
-                    safeRemoveESP(obj)
-                end
-            end
-            
-            -- 断开连接
-            for i = #ESPManager.Connections, 1, -1 do
-                local conn = ESPManager.Connections[i]
-                if not conn.Connected then
-                    table.remove(ESPManager.Connections, i)
-                end
-            end
-        end
-    end
-})
-
-ESPGroup:AddToggle('BossESP', {
-    Text = '35门Boss透视',
-    Default = false,
-    Tooltip = '显示35门Boss位置',
-    Callback = function(Value)
-        if Value then
-            -- 扫描Boss
-            local room35 = workspace.CurrentRooms:FindFirstChild("35")
-            if room35 then
-                for _, obj in pairs(room35:GetDescendants()) do
-                    if (obj.Name == "Boss" or obj.Name == "FinalMonster") and obj:IsA("Model") then
-                        safeAddESP(obj, {
-                            Name = "Boss",
-                            Color = Color3.fromRGB(255, 0, 0), -- 红色
-                            MaxDistance = 1000,
-                            TextSize = 16
-                        })
-                    end
-                end
-            end
-            
-            -- 监听Boss出现
-            local conn = workspace.DescendantAdded:Connect(function(obj)
-                local parent = obj.Parent
-                while parent do
-                    if parent.Name == "35" then
-                        if (obj.Name == "Boss" or obj.Name == "FinalMonster") and obj:IsA("Model") then
-                            safeAddESP(obj, {
-                                Name = "Boss",
-                                Color = Color3.fromRGB(255, 0, 0),
-                                MaxDistance = 1000,
-                                TextSize = 16
-                            })
-                        end
-                        break
-                    end
-                    parent = parent.Parent
-                end
-            end)
-            
-            table.insert(ESPManager.Connections, conn)
-        else
-            -- 清除Boss ESP
-            for obj, esp in pairs(ESPManager.Objects) do
-                if obj.Name == "Boss" or obj.Name == "FinalMonster" then
-                    safeRemoveESP(obj)
-                end
-            end
-            
-            -- 断开连接
-            for i = #ESPManager.Connections, 1, -1 do
-                local conn = ESPManager.Connections[i]
-                if not conn.Connected then
-                    table.remove(ESPManager.Connections, i)
-                end
-            end
-        end
-    end
-})
-
--- 其他工具组
 local OtherGroup = Tabs.Other:AddLeftGroupbox('其他工具')
 
 local function loadTool(name, url)
-    Library:Notify(name.."加载中...", "请稍候")
+    SafeNotify(name.."加载中...", "请稍候", 2)
     
     local start = os.clock()
     local success, result = pcall(function()
@@ -860,9 +844,9 @@ local function loadTool(name, url)
     end)
     
     if success then
-        Library:Notify(name.."已加载", string.format("加载耗时: %.2f秒", os.clock() - start))
+        SafeNotify(name.."已加载", string.format("加载耗时: %.2f秒", os.clock() - start), 3)
     else
-        Library:Notify("加载失败", name.."错误: "..tostring(result))
+        SafeNotify("加载失败", name.."错误: "..tostring(result), 5)
     end
 end
 
@@ -878,7 +862,6 @@ OtherGroup:AddButton('无限收益 (IY)', function()
     loadTool("IY", 'https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source')
 end)
 
--- 玩家离开时清理资源
 game:GetService("Players").PlayerRemoving:Connect(function(player)
     if player == LocalPlayer then
         if speedConnection then speedConnection:Disconnect() end
@@ -920,25 +903,17 @@ game:GetService("Players").PlayerRemoving:Connect(function(player)
     end
 end)
 
--- UI设置标签页
-local SettingsTab = Window:AddTab('UI设置')
-local MenuGroup = SettingsTab:AddLeftGroupbox('菜单设置')
-
--- 添加主题管理和保存管理
 ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
 SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
+SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
 
--- 设置文件夹
 ThemeManager:SetFolder('XB_Script')
 SaveManager:SetFolder('XB_Script/THE_OUTDOORS')
+SaveManager:BuildConfigSection(Tabs.Settings)
+ThemeManager:ApplyToTab(Tabs.Settings)
 
--- 构建配置部分
-SaveManager:BuildConfigSection(SettingsTab)
-ThemeManager:ApplyToTab(SettingsTab)
-
--- 添加菜单控件
+local MenuGroup = Tabs.Settings:AddLeftGroupbox('菜单')
 MenuGroup:AddToggle('KeybindToggle', {
     Text = '显示快捷键菜单',
     Default = true,
@@ -967,35 +942,34 @@ end)
 
 Library.ToggleKeybind = Options.MenuKeybind
 
--- 设置水印
 Library:SetWatermarkVisibility(true)
 local WatermarkConnection = game:GetService('RunService').RenderStepped:Connect(function()
-    Library:SetWatermark('XB脚本 | THE OUTDOORS')
+    Library:SetWatermark(('XB脚本 | THE OUTDOORS | %s fps | %s ms'):format(
+        math.floor(1 / game:GetService('RunService').RenderStepped:Wait()),
+        math.floor(game:GetService('Stats').Network.ServerStatsItem['Data Ping']:GetValue())
+    ))
 end)
 
--- 卸载时清理
 Library:OnUnload(function()
     WatermarkConnection:Disconnect()
-    print('脚本已卸载')
 end)
 
--- 游戏检测
-Library:Notify("XB脚本", "检测中")
+SafeNotify("XB脚本", "检测中")
 
 if game.PlaceId == 6839171747 then
-    Library:Notify("XB脚本", "检测到THE OUTDOORS,已启动脚本")
+    SafeNotify("XB脚本", "检测到THE OUTDOORS,已启动脚本")
 elseif game.PlaceId == 95702387256198 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/sjsksjsk219/aaaaaa/refs/heads/main/偷一辆车"))()
-    Library:Notify("XB脚本", "检测到偷一辆车,已自动开启脚本")
+    SafeNotify("XB脚本", "检测到偷一辆车,已自动开启脚本")
 elseif game.PlaceId == 18687417158 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/sjsksjsk219/aaaaaa/refs/heads/main/%E8%A2%AB%E9%81%97%E5%BC%83"))()
-    Library:Notify("XB脚本", "检测到被遗弃,已自动开启脚本")
+    SafeNotify("XB脚本", "检测到被遗弃,已自动开启脚本")
 elseif game.PlaceId == 12552538292 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/sjsksjsk219/aaaaaa/refs/heads/main/Pressure"))()
-    Library:Notify("XB脚本", "检测到压力,已自动打开脚本")
+    SafeNotify("XB脚本", "检测到压力,已自动打开脚本")
 else
-    Library:Notify("XB脚本", "没有这服务器的脚本,需要请加群249592274")
-    wait(5)
+    SafeNotify("XB脚本", "没有这服务器的脚本,需要请加群249592274", 5)
+    task.wait(5)
     setclipboard("加Q:249592274")
     LocalPlayer:Kick("请更换服务器或脚本")
 end
