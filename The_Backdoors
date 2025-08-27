@@ -1,4 +1,4 @@
-if game.GetService("Players").LocalPlayer.Name ~= "Player591846" then
+if game:GetService("Players").LocalPlayer.Name ~= "Player591846" then
     setclipboard("催更:[Q]249592274")
-    game.Players.LocalPlayer:Kick("抱歉,制作中")
+    game:GetService("Players").LocalPlayer:Kick("抱歉,制作中")
 end
