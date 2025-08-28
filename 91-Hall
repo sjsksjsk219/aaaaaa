@@ -1,1 +1,377 @@
-game:GetService("Players").LocalPlayer:Kick("马上做完了,请耐心等待一会")
+local repo = 'https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/'
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+
+local Window = Library:CreateWindow({
+    Title = '森林中的99天 - 大厅',
+    Center = true,
+    AutoShow = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2
+})
+
+local Tabs = {
+    Main = Window:AddTab('主要功能'),
+    PlayerESP = Window:AddTab('玩家透视'),
+    LobbySniper = Window:AddTab('大厅狙击'),
+    Settings = Window:AddTab('设置')
+}
+
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local Camera = game:GetService("Workspace").CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+
+local MainGroup = Tabs.Main:AddLeftGroupbox('主要功能')
+
+local highBrightnessEnabled = false
+local brightnessLevel = 1
+local brightnessConnection
+
+local function updateBrightness()
+    if highBrightnessEnabled then
+        Lighting.Brightness = brightnessLevel
+        Lighting.Ambient = Color3.new(1, 1, 1)
+        Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+    else
+        Lighting.Brightness = 1
+        Lighting.Ambient = Color3.new(0.5, 0.5, 0.5)
+        Lighting.OutdoorAmbient = Color3.new(0.5, 0.5, 0.5)
+    end
+end
+
+MainGroup:AddToggle('HighBrightness', {
+    Text = '高亮',
+    Default = false,
+    Callback = function(Value)
+        highBrightnessEnabled = Value
+        if brightnessConnection then brightnessConnection:Disconnect() end
+        if Value then
+            brightnessConnection = RunService.RenderStepped:Connect(updateBrightness)
+        end
+        updateBrightness()
+    end
+})
+
+MainGroup:AddSlider('BrightnessLevel', {
+    Text = '亮度调整',
+    Default = 1,
+    Min = 1,
+    Max = 10,
+    Rounding = 1,
+    Suffix = 'x',
+    Callback = function(Value)
+        brightnessLevel = Value
+        if highBrightnessEnabled then updateBrightness() end
+    end
+})
+
+local speedHackEnabled = false
+local targetSpeed = 16
+local currentMultiplier = 1
+local speedConnection = RunService.Heartbeat:Connect(function()
+    if speedHackEnabled and Humanoid then
+        Humanoid.WalkSpeed = targetSpeed
+    end
+end)
+
+MainGroup:AddToggle('SpeedHack', {
+    Text = '开启速度',
+    Default = false,
+    Callback = function(Value)
+        speedHackEnabled = Value
+        if not Value and Humanoid then 
+            Humanoid.WalkSpeed = 16 
+            currentMultiplier = 1
+            targetSpeed = 16
+        end
+    end
+})
+
+MainGroup:AddSlider('SpeedMultiplier', {
+    Text = '速度倍数 (1~6x)',
+    Default = 1,
+    Min = 1,
+    Max = 6,
+    Rounding = 1,
+    Suffix = 'x',
+    Callback = function(Value)
+        currentMultiplier = Value
+        targetSpeed = 16 * Value
+    end
+})
+
+local noclipEnabled = false
+local noclipConnection
+
+local function noclipLoop()
+    if noclipEnabled and Character then
+        for _, part in pairs(Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end
+
+MainGroup:AddToggle('Noclip', {
+    Text = '穿墙模式',
+    Default = false,
+    Callback = function(Value)
+        noclipEnabled = Value
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        
+        if Value then
+            noclipConnection = RunService.Stepped:Connect(noclipLoop)
+        else
+            if Character then
+                for _, part in pairs(Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
+    end
+})
+
+local ESPGroup = Tabs.PlayerESP:AddLeftGroupbox('玩家透视')
+
+local ESP
+local success, err = pcall(function()
+    local ESPLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/MSESP/refs/heads/main/source.luau", true))()
+    ESP = getgenv().mstudio45_ESP or ESPLib
+end)
+
+if not success or not ESP then
+    ESP = {
+        Add = function() return {} end,
+        Remove = function() end,
+        Initialize = function() end
+    }
+    game.StarterGui:SetCore("SendNotification", {Title="ESP加载失败"; Text="功能受限: "..tostring(err); Duration=5;})
+end
+
+pcall(function()
+    ESP:Initialize({
+        PrimaryColor = Color3.new(1,1,1),
+        SecondaryColor = Color3.new(0,0,0),
+        FontColor = Color3.new(1,1,1),
+        MaxDistance = 1000,
+        TracerOrigin = "Bottom",
+        ShowDistance = true,
+        ShowTracer = false,
+        ShowName = true,
+        TeamCheck = false,
+        TeamColor = false,
+        FillTransparency = 0.3,
+        OutlineTransparency = 0.8
+    })
+end)
+
+local PlayerESPManager = {
+    Players = {},
+    Connections = {}
+}
+
+local function updatePlayerESP(player)
+    if not player or player == LocalPlayer then return end
+    
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    
+    if PlayerESPManager.Players[player] then
+        pcall(function()
+            ESP:Remove(PlayerESPManager.Players[player])
+        end)
+    end
+    
+    local success, espObj = pcall(function()
+        return ESP:Add({
+            Name = player.Name,
+            Model = character,
+            Color = Color3.new(1, 0.5, 0),
+            MaxDistance = 1000,
+            TextSize = 14
+        })
+    end)
+    
+    if success then
+        PlayerESPManager.Players[player] = espObj
+    end
+end
+
+local function removePlayerESP(player)
+    if PlayerESPManager.Players[player] then
+        pcall(function()
+            ESP:Remove(PlayerESPManager.Players[player])
+        end)
+        PlayerESPManager.Players[player] = nil
+    end
+end
+
+ESPGroup:AddToggle('PlayerESP', {
+    Text = '玩家透视',
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    updatePlayerESP(player)
+                end
+            end
+            
+            PlayerESPManager.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
+                player.CharacterAdded:Connect(function(character)
+                    updatePlayerESP(player)
+                end)
+                if player.Character then
+                    updatePlayerESP(player)
+                end
+            end)
+            
+            PlayerESPManager.Connections.PlayerRemoving = Players.PlayerRemoving:Connect(function(player)
+                removePlayerESP(player)
+            end)
+            
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    PlayerESPManager.Connections["CharacterAdded_"..player.UserId] = player.CharacterAdded:Connect(function(character)
+                        updatePlayerESP(player)
+                    end)
+                end
+            end
+        else
+            for player in pairs(PlayerESPManager.Players) do
+                removePlayerESP(player)
+            end
+            
+            for _, conn in pairs(PlayerESPManager.Connections) do
+                pcall(function() conn:Disconnect() end)
+            end
+            PlayerESPManager.Connections = {}
+        end
+    end
+})
+
+local SniperGroup = Tabs.LobbySniper:AddLeftGroupbox('大厅狙击')
+
+local selectedEntrance = 1
+local selectedPlayers = 1
+local sniperEnabled = false
+
+SniperGroup:AddDropdown('EntranceSelect', {
+    Values = {'入口 1', '入口 2', '入口 3'},
+    Default = 1,
+    Multi = false,
+    Text = '选择入口',
+    Callback = function(Value)
+        selectedEntrance = tonumber(string.match(Value, "%d+"))
+    end
+})
+
+SniperGroup:AddSlider('PlayersSelect', {
+    Text = '选择人数',
+    Default = 1,
+    Min = 1,
+    Max = 5,
+    Rounding = 0,
+    Suffix = '人',
+    Callback = function(Value)
+        selectedPlayers = Value
+    end
+})
+
+SniperGroup:AddToggle('SniperToggle', {
+    Text = '启用大厅狙击',
+    Default = false,
+    Callback = function(Value)
+        sniperEnabled = Value
+        if Value then
+            local teleportEvent = game:GetService("ReplicatedStorage").RemoteEvents.TeleportEvent
+            
+            local success1, result1 = pcall(function()
+                teleportEvent:FireServer("Add", selectedEntrance)
+            end)
+            
+            local success2, result2 = pcall(function()
+                teleportEvent:FireServer("Chosen", selectedPlayers)
+            end)
+            
+            if success1 and success2 then
+                game.StarterGui:SetCore("SendNotification", {Title="大厅狙击"; Text="成功设置入口 "..selectedEntrance.. " 和人数 "..selectedPlayers; Duration=3;})
+            else
+                game.StarterGui:SetCore("SendNotification", {Title="错误"; Text="设置失败: "..tostring(result1 or result2); Duration=5;})
+            end
+        end
+    end
+})
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
+
+ThemeManager:SetFolder('XB_Script')
+SaveManager:SetFolder('XB_Script/99DAYS_LOBBY')
+SaveManager:BuildConfigSection(Tabs.Settings)
+ThemeManager:ApplyToTab(Tabs.Settings)
+
+local MenuGroup = Tabs.Settings:AddLeftGroupbox('菜单')
+MenuGroup:AddToggle('KeybindToggle', {
+    Text = '显示快捷键菜单',
+    Default = true,
+    Callback = function(Value)
+        Library.KeybindFrame.Visible = Value
+    end
+})
+
+MenuGroup:AddToggle('CustomCursor', {
+    Text = '自定义光标',
+    Default = true,
+    Callback = function(Value)
+        Library.ShowCustomCursor = Value
+    end
+})
+
+MenuGroup:AddLabel('菜单快捷键'):AddKeyPicker('MenuKeybind', {
+    Default = 'RightShift',
+    NoUI = true,
+    Text = '菜单快捷键'
+})
+
+MenuGroup:AddButton('卸载脚本', function()
+    Library:Unload()
+end)
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+Library:SetWatermarkVisibility(true)
+local WatermarkConnection = game:GetService('RunService').RenderStepped:Connect(function()
+    Library:SetWatermark(('XB脚本 | 森林中的99天-大厅 | %s fps | %s ms'):format(
+        math.floor(1 / game:GetService('RunService').RenderStepped:Wait()),
+        math.floor(game:GetService('Stats').Network.ServerStatsItem['Data Ping']:GetValue())
+    ))
+end)
+
+Library:OnUnload(function()
+    WatermarkConnection:Disconnect()
+    if speedConnection then speedConnection:Disconnect() end
+    if brightnessConnection then brightnessConnection:Disconnect() end
+    if noclipConnection then noclipConnection:Disconnect() end
+    
+    Lighting.Brightness = 1
+    Lighting.Ambient = Color3.new(0.5, 0.5, 0.5)
+    Lighting.OutdoorAmbient = Color3.new(0.5, 0.5, 0.5)
+    
+    for player in pairs(PlayerESPManager.Players) do
+        removePlayerESP(player)
+    end
+end)
