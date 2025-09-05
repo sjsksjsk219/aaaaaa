@@ -1,1 +1,398 @@
-game:GetService("Players").LocalPlayer:Kick("笑死我了,乐子,还想开脚本啊,我都没做完,你不是内测人员")
+local repo = 'https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/'
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+
+local Window = Library:CreateWindow({
+    Title = '森林中的99天 - 游戏',
+    Center = true,
+    AutoShow = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2
+})
+
+local Tabs = {
+    Main = Window:AddTab('主要功能'),
+    ESP = Window:AddTab('透视功能'),
+    Automation = Window:AddTab('自动功能'),
+    Settings = Window:AddTab('设置')
+}
+
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local Camera = game:GetService("Workspace").CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+
+local function SafeNotify(Title, Content, Duration)
+    local Notify = Library:Notify(Title, Content, Duration or 5)
+    if Duration then
+        task.delay(Duration, function()
+            if Notify then Notify:Destroy() end
+        end)
+    end
+    return Notify
+end
+
+local MainGroup = Tabs.Main:AddLeftGroupbox('主要功能')
+
+-- 高亮功能
+local highBrightnessEnabled = false
+local brightnessLevel = 1
+local brightnessConnection
+
+local function updateBrightness()
+    if highBrightnessEnabled then
+        Lighting.Brightness = brightnessLevel
+        Lighting.Ambient = Color3.new(1, 1, 1)
+        Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+    else
+        Lighting.Brightness = 1
+        Lighting.Ambient = Color3.new(0.5, 0.5, 0.5)
+        Lighting.OutdoorAmbient = Color3.new(0.5, 0.5, 0.5)
+    end
+end
+
+MainGroup:AddToggle('HighBrightness', {
+    Text = '高亮',
+    Default = false,
+    Callback = function(Value)
+        highBrightnessEnabled = Value
+        if brightnessConnection then brightnessConnection:Disconnect() end
+        if Value then
+            brightnessConnection = RunService.RenderStepped:Connect(updateBrightness)
+        end
+        updateBrightness()
+    end
+})
+
+MainGroup:AddSlider('BrightnessLevel', {
+    Text = '亮度调整',
+    Default = 1,
+    Min = 1,
+    Max = 10,
+    Rounding = 1,
+    Suffix = 'x',
+    Callback = function(Value)
+        brightnessLevel = Value
+        if highBrightnessEnabled then updateBrightness() end
+    end
+})
+
+-- ESP功能组
+local ESPGroup = Tabs.ESP:AddLeftGroupbox('透视功能')
+
+local ESP
+local success, err = pcall(function()
+    local ESPLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/MSESP/refs/heads/main/source.luau", true))()
+    ESP = getgenv().mstudio45_ESP or ESPLib
+end)
+
+if not success or not ESP then
+    ESP = {
+        Add = function() return {} end,
+        Remove = function() end,
+        Initialize = function() end
+    }
+    SafeNotify("ESP加载失败", "功能受限: "..tostring(err))
+end
+
+pcall(function()
+    ESP:Initialize({
+        PrimaryColor = Color3.new(1,1,1),
+        SecondaryColor = Color3.new(0,0,0),
+        FontColor = Color3.new(1,1,1),
+        MaxDistance = 1000,
+        TracerOrigin = "Bottom",
+        ShowDistance = true,
+        ShowTracer = false,
+        ShowName = true,
+        TeamCheck = false,
+        TeamColor = false,
+        FillTransparency = 0.3,
+        OutlineTransparency = 0.8
+    })
+end)
+
+local ESPManager = {
+    Objects = {},
+    Connections = {}
+}
+
+local function safeAddESP(obj, config)
+    if not obj or not obj.PrimaryPart or not ESP.Add then return nil end
+    if ESPManager.Objects[obj] then return ESPManager.Objects[obj] end
+    
+    local success, espObj = pcall(function()
+        return ESP:Add({
+            Name = config.Name,
+            Model = obj,
+            Color = config.Color,
+            MaxDistance = config.MaxDistance or 1000,
+            TextSize = config.TextSize or 14,
+            ESPType = config.ESPType or "Highlight",
+            FillTransparency = config.FillTransparency or 0.3
+        })
+    end)
+    
+    if success and espObj then
+        ESPManager.Objects[obj] = espObj
+        return espObj
+    end
+    return nil
+end
+
+local function safeRemoveESP(obj)
+    if ESPManager.Objects[obj] then
+        pcall(function()
+            if ESP.Remove then
+                ESP:Remove(ESPManager.Objects[obj])
+            end
+            ESPManager.Objects[obj] = nil
+        end)
+    end
+end
+
+-- 怪物透视
+ESPGroup:AddToggle('MonsterESP', {
+    Text = '怪物透视',
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            -- 扫描现有怪物
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("Model") and (obj.Name:find("Monster") or obj.Name:find("Enemy") or obj.Name:find("Bear") or obj.Name:find("Wolf")) then
+                    safeAddESP(obj, {
+                        Name = "怪物",
+                        Color = Color3.fromRGB(255, 0, 0)
+                    })
+                end
+            end
+            
+            -- 监听新怪物
+            local conn = workspace.DescendantAdded:Connect(function(obj)
+                if obj:IsA("Model") and (obj.Name:find("Monster") or obj.Name:find("Enemy") or obj.Name:find("Bear") or obj.Name:find("Wolf")) then
+                    safeAddESP(obj, {
+                        Name = "怪物",
+                        Color = Color3.fromRGB(255, 0, 0)
+                    })
+                end
+            end)
+            
+            table.insert(ESPManager.Connections, conn)
+        else
+            -- 移除所有怪物ESP
+            for obj in pairs(ESPManager.Objects) do
+                if obj:IsA("Model") and (obj.Name:find("Monster") or obj.Name:find("Enemy") or obj.Name:find("Bear") or obj.Name:find("Wolf")) then
+                    safeRemoveESP(obj)
+                end
+            end
+            
+            -- 清理连接
+            for i = #ESPManager.Connections, 1, -1 do
+                local conn = ESPManager.Connections[i]
+                if not conn.Connected then
+                    table.remove(ESPManager.Connections, i)
+                end
+            end
+        end
+    end
+})
+
+-- 燃料透视
+ESPGroup:AddToggle('FuelESP', {
+    Text = '燃料透视',
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            -- 扫描现有燃料
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("Model") and (obj.Name:find("Fuel") or obj.Name:find("Can") or obj.Name:find("Gas")) then
+                    safeAddESP(obj, {
+                        Name = "燃料",
+                        Color = Color3.fromRGB(255, 165, 0)
+                    })
+                end
+            end
+            
+            -- 监听新燃料
+            local conn = workspace.DescendantAdded:Connect(function(obj)
+                if obj:IsA("Model") and (obj.Name:find("Fuel") or obj.Name:find("Can") or obj.Name:find("Gas")) then
+                    safeAddESP(obj, {
+                        Name = "燃料",
+                        Color = Color3.fromRGB(255, 165, 0)
+                    })
+                end
+            end)
+            
+            table.insert(ESPManager.Connections, conn)
+        else
+            -- 移除所有燃料ESP
+            for obj in pairs(ESPManager.Objects) do
+                if obj:IsA("Model") and (obj.Name:find("Fuel") or obj.Name:find("Can") or obj.Name:find("Gas")) then
+                    safeRemoveESP(obj)
+                end
+            end
+            
+            -- 清理连接
+            for i = #ESPManager.Connections, 1, -1 do
+                local conn = ESPManager.Connections[i]
+                if not conn.Connected then
+                    table.remove(ESPManager.Connections, i)
+                end
+            end
+        end
+    end
+})
+
+-- 自动功能组
+local AutoGroup = Tabs.Automation:AddLeftGroupbox('自动功能')
+
+-- 自动砍木头
+local autoChopEnabled = false
+local chopConnection
+
+AutoGroup:AddToggle('AutoChop', {
+    Text = '自动砍木头',
+    Default = false,
+    Callback = function(Value)
+        autoChopEnabled = Value
+        if Value then
+            chopConnection = RunService.Heartbeat:Connect(function()
+                if autoChopEnabled then
+                    -- 模拟砍木头操作
+                    local trees = workspace:FindFirstChild("Trees") or workspace:FindFirstChild("Tree")
+                    if trees then
+                        for _, tree in pairs(trees:GetChildren()) do
+                            if tree:IsA("Model") and tree:FindFirstChild("Wood") then
+                                -- 这里模拟点击砍树按钮
+                                local args = {
+                                    [1] = tree,
+                                    [2] = "Chop"
+                                }
+                                
+                                -- 模拟触发远程事件
+                                game:GetService("ReplicatedStorage"):FindFirstChild("TreeEvent") and
+                                game:GetService("ReplicatedStorage").TreeEvent:FireServer(unpack(args))
+                                
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        elseif chopConnection then
+            chopConnection:Disconnect()
+        end
+    end
+})
+
+-- 自动开宝箱
+local autoChestEnabled = false
+local chestConnection
+
+AutoGroup:AddToggle('AutoChest', {
+    Text = '自动开宝箱',
+    Default = false,
+    Callback = function(Value)
+        autoChestEnabled = Value
+        if Value then
+            chestConnection = RunService.Heartbeat:Connect(function()
+                if autoChestEnabled then
+                    -- 查找宝箱
+                    local chests = workspace:FindFirstChild("Chests") or workspace:FindFirstChild("Chest")
+                    if chests then
+                        for _, chest in pairs(chests:GetChildren()) do
+                            if chest:IsA("Model") and chest:FindFirstChild("Chest") then
+                                -- 模拟点击开宝箱按钮
+                                local args = {
+                                    [1] = chest,
+                                    [2] = "Open"
+                                }
+                                
+                                -- 模拟触发远程事件
+                                game:GetService("ReplicatedStorage"):FindFirstChild("ChestEvent") and
+                                game:GetService("ReplicatedStorage").ChestEvent:FireServer(unpack(args))
+                                
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        elseif chestConnection then
+            chestConnection:Disconnect()
+        end
+    end
+})
+
+-- 设置部分
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
+
+ThemeManager:SetFolder('XB_Script')
+SaveManager:SetFolder('XB_Script/99DAYS_GAME')
+SaveManager:BuildConfigSection(Tabs.Settings)
+ThemeManager:ApplyToTab(Tabs.Settings)
+
+local MenuGroup = Tabs.Settings:AddLeftGroupbox('菜单')
+MenuGroup:AddToggle('KeybindToggle', {
+    Text = '显示快捷键菜单',
+    Default = true,
+    Callback = function(Value)
+        Library.KeybindFrame.Visible = Value
+    end
+})
+
+MenuGroup:AddToggle('CustomCursor', {
+    Text = '自定义光标',
+    Default = true,
+    Callback = function(Value)
+        Library.ShowCustomCursor = Value
+    end
+})
+
+MenuGroup:AddLabel('菜单快捷键'):AddKeyPicker('MenuKeybind', {
+    Default = 'RightShift',
+    NoUI = true,
+    Text = '菜单快捷键'
+})
+
+MenuGroup:AddButton('卸载脚本', function()
+    Library:Unload()
+end)
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+Library:SetWatermarkVisibility(true)
+local WatermarkConnection = game:GetService('RunService').RenderStepped:Connect(function()
+    Library:SetWatermark(('XB脚本 | 森林中的99天-游戏 | %s fps | %s ms'):format(
+        math.floor(1 / game:GetService('RunService').RenderStepped:Wait()),
+        math.floor(game:GetService('Stats').Network.ServerStatsItem['Data Ping']:GetValue())
+    ))
+end)
+
+Library:OnUnload(function()
+    WatermarkConnection:Disconnect()
+    -- 清理资源
+    if brightnessConnection then brightnessConnection:Disconnect() end
+    if chopConnection then chopConnection:Disconnect() end
+    if chestConnection then chestConnection:Disconnect() end
+    
+    Lighting.Brightness = 1
+    Lighting.Ambient = Color3.new(0.5, 0.5, 0.5)
+    Lighting.OutdoorAmbient = Color3.new(0.5, 0.5, 0.5)
+    
+    for obj in pairs(ESPManager.Objects) do
+        safeRemoveESP(obj)
+    end
+end)
+
+
+else
+    game.StarterGui:SetCore("SendNotification", {Title="XB脚本"; Text="未检测到游戏环境"; Duration=3;})
+end
