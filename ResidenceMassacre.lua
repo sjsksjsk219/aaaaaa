@@ -11,8 +11,17 @@ local lighting = game:GetService("Lighting")
 local oFogStart = nil
 local oFogEnd = nil
 local Flashlight = nil
-local monsterList
+local monsterList = nil
 local oldConnect = nil
+local Radio = game.Workspace.Radio
+local camera = game.Workspace:FindFirstChild("Camera")
+
+local RequiredMainGame
+local thirdPersonX, thirdPersonY, thirdPersonZ = 0, 0, 6
+
+pcall(function()
+    RequiredMainGame = require(pl.PlayerGui.MainUI.Initiator.Main_Game)
+end)
 
 local ESPLib = getgenv().mstudio45_ESP or loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/MSESP/refs/heads/main/source.luau"))()
 getgenv().mstudio45_ESP = ESPLib
@@ -71,7 +80,7 @@ Library.ShowToggleFrameInKeybinds = true
 
 local Window = Library:CreateWindow({
     Title = "XBHUB",
-    Footer = "GAME: 住宅大逃杀  Vision: 0.9(Beta)  Location:Night 1",
+    Footer = "GAME: 住宅大逃杀  Vision: v0.99(Beta)  Location:Night 1",
     Icon = nil,
     NotifySide = "Right",
     ShowCustomCursor = true,
@@ -89,7 +98,7 @@ local Tabs = {
 Tabs.User:UpdateWarningBox({
     Visible = true,
     Title = "更新功能公告",
-    Text = "<font color='#FFAA00'>[Night 1]</font>\n<font color='#00FF00'>增加ESP功能</font>",
+    Text = "<font color='#FFAA00'>[Night 1]</font>\n<font color='#00FF00'>补全相机Group</font>",
     IsNormal = true,
 })
 
@@ -129,7 +138,7 @@ LeftUserGroup:AddLabel({
 })
 
 RightUserGroup:AddLabel({
-    Text = "<font color='#00FF00'>●</font>速度修改\n<font color='#00FF00'>●</font>高亮\n<font color='#00FF00'>●</font>无限体力\n<font color='#00FF00'>●</font>实用功能\n<font color='#00FF00'>●</font>怪物预警\n<font color='#FF0000'>●</font>ESP --物品ESP故障",
+    Text = "<font color='#00FF00'>●</font>速度修改\n<font color='#00FF00'>●</font>高亮\n<font color='#00FF00'>●</font>无限体力\n<font color='#00FF00'>●</font>实用功能\n<font color='#00FF00'>●</font>怪物预警\n<font color='#FF0000'>●</font>ESP --物品ESP故障\n<font color='#00FF00'>●</font>相机",
     DoesWrap = true,
     RichText = true,
 })
@@ -138,7 +147,7 @@ local SpeedGroup = Tabs.Main:AddLeftGroupbox("速度", "zap")
 
 SpeedGroup:AddToggle("SpeedHack", {
     Text = "启用速度绕过",
-    Default = false,
+    Default = true,
     DisabledTooltip = "该功能为守护您的安全保持开启",
 })
 
@@ -223,6 +232,7 @@ SpeedGroup:AddButton({
 })
 
 local EnvironmentGroup = Tabs.Main:AddRightGroupbox("环境", "sun")
+local CameraGroup = Tabs.Main:AddRightGroupbox("相机")
 
 local highBrightnessEnabled = false
 local brightnessLevel = 1
@@ -289,6 +299,93 @@ EnvironmentGroup:AddToggle("RemoveAtmosphere", {
     DisabledTooltip = "该功能已被锁定",
 })
 
+CameraGroup:AddToggle("NoShake", {
+    Text = "无相机摇晃",
+    Default = false,
+})
+
+Toggles.NoShake:OnChanged(function(value)
+    if value then
+        camera.CameraType = "Follow"
+    else
+        camera.CameraType = "Custom"
+    end
+end)
+
+CameraGroup:AddToggle('ViewmodeOffset', {
+    Text = "视角模型偏移",
+    Default = false,
+    Callback = function(Value)
+        if not Value and RequiredMainGame then
+            RequiredMainGame.tooloffset = Vector3.new(0, 0, 0)
+        end
+    end
+})
+CameraGroup:AddSlider("XOffset", {
+    Text = "X",
+    Default = 0,
+    Min = -10,
+    Max = 10,
+    Rounding = 1,
+    Compact = true,
+})
+CameraGroup:AddSlider("YOffset", {
+    Text = "Y",
+    Default = 0,
+    Min = -10,
+    Max = 10,
+    Rounding = 1,
+    Compact = true,
+})
+CameraGroup:AddSlider("ZOffset", {
+    Text = "Z",
+    Default = 0,
+    Min = -10,
+    Max = 10,
+    Rounding = 1,
+    Compact = true,
+})
+
+CameraGroup:AddDivider()
+
+CameraGroup:AddToggle('ThirdPerson', {
+    Text = "第三人称",
+    Default = false
+}):AddKeyPicker('ThirdPKeybind', {
+    Default = 'T',
+    SyncToggleState = true,
+    Mode = 'Toggle',
+    Text = '第三人称',
+    NoUI = false,
+})
+CameraGroup:AddSlider("CamX", {
+    Text = "X",
+    Default = thirdPersonX,
+    Min = -10,
+    Max = 10,
+    Rounding = 0,
+    Compact = true,
+    Callback = function(Value) thirdPersonX = Value end,
+})
+CameraGroup:AddSlider("CamY", {
+    Text = "Y",
+    Default = thirdPersonY,
+    Min = -10,
+    Max = 10,
+    Rounding = 0,
+    Compact = true,
+    Callback = function(Value) thirdPersonY = Value end,
+})
+CameraGroup:AddSlider("CamZ", {
+    Text = "Z",
+    Default = thirdPersonZ,
+    Min = -10,
+    Max = 10,
+    Rounding = 0,
+    Compact = true,
+    Callback = function(Value) thirdPersonZ = Value end,
+})
+
 Toggles.RemoveAtmosphere:OnChanged(function(value)
     if value then
         if lighting:FindFirstChildWhichIsA("Atmosphere") then
@@ -332,6 +429,28 @@ ExploitLeftGroup:AddToggle("InfO2", {
     Default = false,
 })
 
+ExploitLeftGroup:AddToggle("AutoRadio", {
+    Text = "无收音机杂音",
+    Tooltip = "静音收音机",
+    Default = false,
+})
+
+Toggles.AutoRadio:OnChanged(function(value)
+    task.spawn(function()
+        while value do
+        local speaker = Radio:FindFirstChild("Speaker")
+        if speaker then
+            for _, v in ipairs(speaker:GetChildren()) do
+                v:Stop()
+                task.wait()
+            end
+        end
+        
+        task.wait(5)
+        end
+    end)
+end)
+
 Toggles.InfO2:OnChanged(function(Value)
     if Value then
         pl.Character.Breath.Value = 9999999
@@ -351,17 +470,6 @@ ESPGroup:AddToggle("MutantESP", {
     Transparency = 0.8,
 })
 
---[[
-ESPGroup:AddToggle("ItemESP", {
-    Text = "物品",
-    Default = false,
-}):AddColorPicker("ItemColor", {
-    Default = Color3.new(0, 1, 0),
-    Title = "物品颜色",
-    Transparency = 0.8,
-})
-]]--
-
 Toggles.MutantESP:OnChanged(function(value)
     if value then
         local existing = workspace:FindFirstChild("Mutant")
@@ -376,67 +484,6 @@ end)
 Options.MutantColor:OnChanged(function()
     if activeESP["Mutant"] then
         updateESPColor("Mutant", Options.MutantColor)
-    end
-end)
-
---[[
-Toggles.ItemESP:OnChanged(function(value)
-    if value then
-        itemScanRunning = true
-        task.spawn(function()
-            while itemScanRunning and Toggles.ItemESP.Value do
-                for name, esp in pairs(activeESP) do
-                    if name:match("^Item_") then
-                        esp:Destroy()
-                        activeESP[name] = nil
-                    end
-                end
-                local itemSpots = workspace:FindFirstChild("ItemSpots")
-                if itemSpots then
-                    local itemIndex = 1
-                    for _, spot in ipairs(itemSpots:GetChildren()) do
-                        local children = spot:GetChildren()
-                        if #children >= 3 then
-                            for _, child in ipairs(children) do
-                                if child.Name == "Equip" or child.Name == "Weld" then return end
-                                local handle = child:FindFirstChild("Handle")
-                                if handle then
-                                    local espName = "Item_" .. itemIndex
-                                    manageESP(true, espName, handle, Options.ItemColor)
-                                    itemIndex = itemIndex + 1
-                                end
-                            end
-                        end
-                    end
-                end
-                task.wait(1)
-            end
-            for name, esp in pairs(activeESP) do
-                if name:match("^Item_") then
-                    esp:Destroy()
-                    activeESP[name] = nil
-                end
-            end
-        end)
-    else
-        itemScanRunning = false
-        for name, esp in pairs(activeESP) do
-            if name:match("^Item_") then
-                esp:Destroy()
-                activeESP[name] = nil
-            end
-        end
-    end
-end)
-]]--
-
-Options.ItemColor:OnChanged(function()
-    for name, esp in pairs(activeESP) do
-        if name:match("^Item_") then
-            esp.CurrentSettings.Color = Options.ItemColor.Value
-            esp.CurrentSettings.FillColor = Options.ItemColor.Value
-            esp.CurrentSettings.FillTransparency = Options.ItemColor.Transparency
-        end
     end
 end)
 
@@ -504,6 +551,46 @@ SaveManager:LoadAutoloadConfig()
 
 Library.ToggleKeybind = Options.MenuToggleKey
 
+local Connections = {}
+
+table.insert(Connections, RunService.Heartbeat:Connect(function(dt)
+    if not pl.Character or not pl.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    if Toggles.ViewmodeOffset and Toggles.ViewmodeOffset.Value and RequiredMainGame then
+        RequiredMainGame.tooloffset = Vector3.new(
+            Options.XOffset.Value,
+            Options.YOffset.Value,
+            Options.ZOffset.Value
+        )
+    end
+
+    if Toggles.ThirdPerson and Toggles.ThirdPerson.Value then
+        local char = pl.Character
+        local cam = workspace.CurrentCamera
+        if cam then
+            cam.CFrame = cam.CFrame * CFrame.new(thirdPersonX, thirdPersonY, thirdPersonZ)
+        end
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name == "Head" then
+                part.LocalTransparencyModifier = 0
+            elseif part:IsA("Accessory") and part:FindFirstChild("Handle") then
+                part.Handle.LocalTransparencyModifier = 0
+            end
+        end
+    else
+        local char = pl.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and part.Name == "Head" then
+                    part.LocalTransparencyModifier = 1
+                elseif part:IsA("Accessory") and part:FindFirstChild("Handle") then
+                    part.Handle.LocalTransparencyModifier = 1
+                end
+            end
+        end
+    end
+end))
+
 Library:OnUnload(function()
     itemScanRunning = false
     if brightnessConnection then
@@ -514,6 +601,9 @@ Library:OnUnload(function()
     end
     highBrightnessEnabled = false
     updateBrightness()
+    for _, con in pairs(Connections) do
+        con:Disconnect()
+    end
 end)
 
 else
