@@ -1,15 +1,67 @@
 if game.PlaceId == 13977939077 then
-  --这是个开源脚本
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
 local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 
+local Loading = Library:CreateLoading({
+    Title = "XBHUB",
+    LoadingIcon = 97544096941083,
+    TotalSteps = 7,
+    AutoResizeHeight = true,
+    WindowWidth = 600,
+    WindowHeight = 380,
+})
+
+Loading:SetMessage("正在等待角色加载...")
+Loading:SetCurrentStep(1)
+
+local Sidebar = Loading.Sidebar
+Sidebar:AddLabel("加载器版本:v0.0.4.3")
+local JoinButton = Sidebar:AddButton({
+    Text = "进入脚本",
+    Func = function()
+        Loading:Destroy()
+        Library:Notify({
+            Title = "XBHUB",
+            Description = "成功进入脚本!",
+            Time = 5,
+            SoundId = 4590657391,
+        })
+    end,
+    DisabledTooltip = "请等待加载完成",
+})
+
+Sidebar:AddButton({
+    Text = "卸载脚本",
+    Func = function()
+        Loading:Destroy()
+        Library:Unload()
+        getgenv().OpenUi = false
+        return
+    end,
+})
+
+JoinButton:SetDisabled(true)
+
 local pl = game:GetService("Players").LocalPlayer
-local Players = game:GetService("Players")
 local humanoid = pl.Character.Humanoid
+if humanoid == nil then
+    while true do
+        pl.CharacterAdded:Connect(function(char)
+            humanoid = char:WaitForChild("Humanoid")
+        end)
+        if humanoid then
+            break
+        end
+        task.wait()
+    end
+end
+
+local Players = game:GetService("Players")
 local lighting = game:GetService("Lighting")
 local lTime = 0
+local rain = lighting.Rainy
 
 local loadingTime = coroutine.create(function()
     while true do
@@ -20,13 +72,13 @@ end)
 
 local origWalkSpeed = humanoid.WalkSpeed
 
+-- ESP 高亮库
 local ESPLib = getgenv().mstudio45_ESP or loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/MSESP/refs/heads/main/source.luau"))()
 getgenv().mstudio45_ESP = ESPLib
 local activeESP = {}
-local itemScanRunning = false
-
 local PlayersESPConnections = {}
 
+-- 高亮管理
 local function manageESP(toggle, name, model, colorPicker)
     if toggle then
         if activeESP[name] then activeESP[name]:Destroy() end
@@ -58,6 +110,7 @@ local function updateESPColor(name, colorPicker)
     end
 end
 
+-- ========== Toggles & Options ==========
 local Toggles = Library.Toggles
 local Options = Library.Options
 local speedHack = false
@@ -68,22 +121,13 @@ Library.ShowToggleFrameInKeybinds = true
 
 local Window = Library:CreateWindow({
     Title = "XBHUB",
-    Footer = "GAME: Chain  Vision: v0.01(Beta)",
+    Footer = "GAME: Chain  Vision: v0.03(Beta)",
     Icon = nil,
     NotifySide = "Right",
     ShowCustomCursor = true,
     Center = true,
     AutoShow = false,
     Resizable = false,
-})
-
-local Loading = Library:CreateLoading({
-    Title = "XBHUB",
-    LoadingIcon = 97544096941083,
-    TotalSteps = 7,
-    AutoResizeHeight = true,
-    WindowWidth = 600,
-    WindowHeight = 380,
 })
 
 local function errorLibrary()
@@ -103,12 +147,10 @@ task.spawn(function()
                 Time = 5,
                 SoundId = 4590657391,
             })
-            
             errorLibrary()
-            
             lTime = nil
         end
-    task.wait()
+        task.wait()
     end
 end)
 
@@ -130,8 +172,7 @@ Loading:ShowSidebarPage(true)
 Loading:SetSidebarWidth(320)
 
 Loading:SetMessage("正在检测是否开启多个UI...")
-Loading:SetCurrentStep(1)
-
+Loading:SetCurrentStep(2)
 task.wait(0.2)
 
 if getgenv().OpenUi then
@@ -147,43 +188,15 @@ end
 getgenv().OpenUi = true
 
 Loading:SetMessage("正在等待游戏加载完成...")
-Loading:SetCurrentStep(2)
-
+Loading:SetCurrentStep(3)
 repeat task.wait() until game:IsLoaded()
 
 Loading:SetMessage("正在测试注入器UNC...")
-Loading:SetCurrentStep(3)
-
-local Sidebar = Loading.Sidebar
-Sidebar:AddLabel("加载器版本:v0.0.4.3")
-local JoinButton = Sidebar:AddButton({
-    Text = "进入脚本",
-    Func = function()
-        Loading:Destroy()
-        Library:Notify({
-            Title = "XBHUB",
-            Description = "成功进入脚本!",
-            Time = 5,
-            SoundId = 4590657391,
-        })
-    end,
-    DisabledTooltip = "请等待加载完成",
-})
-
-Sidebar:AddButton({
-    Text = "卸载脚本",
-    Func = function()
-        Loading:Destroy()
-        Library:Unload()
-        getgenv().OpenUi = false
-        return
-    end,
-})
-
-JoinButton:SetDisabled(true)
+Loading:SetCurrentStep(4)
 
 Sidebar:AddLabel("<font color='#00FF00'>●</font> 通过  <font color='#FF0000'>●</font> 失败  <font color='#FFAA00'>⚠</font> 未测试")
 
+-- ==================== UNC 测试 ====================
 local passes, fails = 0, 0
 local running = 0
 local testResults = {}
@@ -272,6 +285,21 @@ test("setupvalue", {}, function()
     assert(test() == "success", "setupvalue did not set the first upvalue")
 end)
 
+test("isfolder", {}, function()
+    assert(isfolder(".tests") == true, "Did not return true for a folder")
+    assert(isfolder(".tests/doesnotexist") == false, "Did not return false")
+end)
+--[[
+test("setfflag", {}, function()
+    local success, err = pcall(function()
+        setfflag("TestFlag", "test")
+    end)
+    if not success then
+        error("setfflag failed: " .. tostring(err))
+    end
+    assert(getfflag("TestFlag") == "test", "setfflag did not set the fflag correctly")
+end)
+--]]
 test("getupvalues", {}, function()
     local upvalue = function() end
     local function testFunc() print(upvalue) end
@@ -326,6 +354,12 @@ test("getgc", {}, function()
     assert(type(gc) == "table" and #gc > 0, "getgc failed")
 end)
 
+test("compareinstances", {}, function()
+    local part = Instance.new("Part")
+    local clone = cloneref(part)
+    assert(compareinstances(part, clone), "compareinstances failed")
+end)
+
 test("Drawing", {}, function()
     local d = Drawing.new("Square")
     d.Visible = false
@@ -358,6 +392,10 @@ test("isfunctionhooked", {}, function()
     local ref = hookfunction(f, function() end)
     assert(isfunctionhooked(f) == true, "isfunctionhooked failed")
     restorefunction(f)
+end)
+
+test("gethui", {}, function()
+    assert(typeof(gethui()) == "Instance", "gethui failed")
 end)
 
 test("getrenv", {}, function()
@@ -401,6 +439,35 @@ test("getinfo", {}, function()
     assert(type(info) == "table" and info.what ~= nil, "debug.getinfo failed")
 end)
 
+test("writefile", {}, function()
+    writefile(".tests/writefile_test.txt", "world")
+    assert(readfile(".tests/writefile_test.txt") == "world", "writefile failed")
+end)
+
+test("loadfile", {}, function()
+    writefile(".tests/loadfile_test.txt", "return ... + 1")
+    local fn, err = loadfile(".tests/loadfile_test.txt")
+    assert(fn and fn(1) == 2, "loadfile failed")
+end)
+
+test("replicatesignal", {}, function()
+    local event = Instance.new("BindableEvent")
+    replicatesignal(event.Event, "Test")
+    event:Destroy()
+end)
+
+test("delfolder", {}, function()
+    makefolder(".tests/delfolder_test")
+    delfolder(".tests/delfolder_test")
+    assert(not isfolder(".tests/delfolder_test"), "delfolder failed")
+end)
+
+test("firesignal", {}, function()
+    local event = Instance.new("BindableEvent")
+    firesignal(event.Event, "Test")
+    event:Destroy()
+end)
+
 test("getcallbackvalue", {}, function()
     local bf = Instance.new("BindableFunction")
     local function testFunc() end
@@ -418,7 +485,16 @@ test("getrawmetatable", {}, function()
     local obj = setmetatable({}, mt)
     assert(getrawmetatable(obj) == mt, "getrawmetatable failed")
 end)
-
+--[[
+test("request", {}, function()
+    local response = request({
+        Url = "https://httpbin.org/user-agent",
+        Method = "GET",
+    })
+    assert(type(response) == "table" and response.StatusCode == 200, "request failed")
+    return game:GetService("HttpService"):JSONDecode(response.Body)["user-agent"]
+end)
+--]]
 test("getnamecallmethod", {}, nil)
 
 test("isfile", {}, function()
@@ -447,6 +523,25 @@ test("require", {}, function()
     assert(s or not s, "require exists")
 end)
 
+test("WebSocket", {}, function()
+    local types = {
+        Send = "function",
+        Close = "function",
+        OnMessage = {"table", "userdata"},
+        OnClose = {"table", "userdata"},
+    }
+    local ws = WebSocket.connect("ws://echo.websocket.events")
+    assert(type(ws) == "table" or type(ws) == "userdata", "Did not return a table or userdata")
+    for k, v in pairs(types) do
+        if type(v) == "table" then
+            assert(table.find(v, type(ws[k])), "Did not return a " .. table.concat(v, ", ") .. " for " .. k .. " (a " .. type(ws[k]) .. ")")
+        else
+            assert(type(ws[k]) == v, "Did not return a " .. v .. " for " .. k .. " (a " .. type(ws[k]) .. ")")
+        end
+    end
+    ws:Close()
+end)
+
 test("getupvalue", {}, function()
     local upvalue = function() end
     local function testFunc() print(upvalue) end
@@ -457,6 +552,37 @@ test("newcclosure", {}, function()
     local function testFunc() return true end
     local c = newcclosure(testFunc)
     assert(testFunc() == c() and testFunc ~= c and iscclosure(c), "newcclosure failed")
+end)
+
+test("queue_on_teleport", {"queueonteleport"}, function()
+    assert(type(queue_on_teleport) == "function", "queue_on_teleport is not a function")
+end)
+
+test("getfflag", {}, function()
+    local f = getfflag("TestFlag")
+    assert(type(f) == "boolean" or f == nil, "getfflag returned unexpected type")
+end)
+
+test("mousemoverel", {}, function()
+    mousemoverel(0, 0)
+end)
+
+test("isexecutorclosure", {"checkclosure", "isourclosure"}, function()
+    assert(isexecutorclosure(print) == false, "print should not be executor closure")
+    assert(isexecutorclosure(isexecutorclosure) == true, "isexecutorclosure failed")
+end)
+
+test("fireproximityprompt", {}, function()
+    local prompt = Instance.new("ProximityPrompt")
+    prompt.Parent = workspace
+    fireproximityprompt(prompt)
+    prompt:Destroy()
+end)
+
+test("hookfunction", {"replaceclosure"}, function()
+    local function testFunc() return true end
+    local ref = hookfunction(testFunc, function() return false end)
+    assert(testFunc() == false and ref() == true, "hookfunction failed")
 end)
 
 repeat task.wait() until running == 0
@@ -481,11 +607,13 @@ Library:Notify({
 })
 
 Loading:SetMessage("正在加载选项...")
-Loading:SetCurrentStep(4)
+Loading:SetCurrentStep(5)
 
+-- ========== 创建选项卡 ==========
 local Tabs = {
     User = Window:AddTab("首页", "house"),
     Main = Window:AddTab("基本功能", "user"),
+    ESP = Window:AddTab("ESP", "eye"),
     Exploit = Window:AddTab("漏洞利用", "bug"),
 }
 
@@ -500,7 +628,6 @@ local LeftUserGroup = Tabs.User:AddLeftGroupbox("玩家信息", "user")
 local RightUserGroup = Tabs.User:AddRightGroupbox("脚本信息", "info")
 
 local playerName = pl.Name
-
 local defaultAvatarUrl = "rbxasset://textures/ui/GuiImagePlaceholder.png"
 local PlayerImage = LeftUserGroup:AddImage("PlayerAvatar", {
     Image = defaultAvatarUrl,
@@ -508,7 +635,6 @@ local PlayerImage = LeftUserGroup:AddImage("PlayerAvatar", {
     ScaleType = Enum.ScaleType.Fit,
     Visible = true,
 })
-
 local function updateAvatar()
     local userId = pl.UserId
     local thumbType = Enum.ThumbnailType.HeadShot
@@ -517,12 +643,9 @@ local function updateAvatar()
         return game:GetService("Players"):GetUserThumbnailAsync(userId, thumbType, thumbSize)
     end)
     if success and content then
-        pcall(function()
-            PlayerImage:SetImage(content)
-        end)
+        pcall(function() PlayerImage:SetImage(content) end)
     end
 end
-
 updateAvatar()
 
 LeftUserGroup:AddLabel({
@@ -530,66 +653,62 @@ LeftUserGroup:AddLabel({
     DoesWrap = true,
     RichText = true,
 })
-
 RightUserGroup:AddLabel({
     Text = "暂无",
     DoesWrap = true,
     RichText = true,
 })
 
--- ============================================================
--- 新增：Main Tab 的移动与状态组
--- ============================================================
+-- ========== Main 标签页 - 移动与状态 ==========
 local MoveGroup = Tabs.Main:AddLeftGroupbox("移动与状态", "user")
 
--- 存储原始速度、亮度等
 local originalSpeed = humanoid.WalkSpeed
-local originalBrightness = lighting.Brightness
-local originalAmbient = lighting.Ambient
-local originalOutdoorAmbient = lighting.OutdoorAmbient
+local speedLoopRunning = false
+local speedLoopConnection = nil
 
--- 禁用惯性 Toggle（Risky 红色提醒）
 local InertiaToggle = MoveGroup:AddToggle("DisableInertia", {
     Text = "禁用惯性 (奔跑不可用)",
     Default = false,
     Risky = true,
     Tooltip = "开启后角色将无法奔跑，移动组件会被强制禁用",
-    Callback = function(val)
-        -- 功能将在 OnChanged 中处理
-    end
 })
 
--- 速度修改 Toggle + Slider
 local SpeedToggle = MoveGroup:AddToggle("SpeedMod", {
     Text = "启用速度修改",
     Default = false,
-    Tooltip = "开启后可调整移动速度"
+    Tooltip = "开启后可调整移动速度（上限50）"
 })
 local SpeedSlider = MoveGroup:AddSlider("SpeedValue", {
     Text = "速度值",
     Default = originalSpeed,
     Min = 0,
-    Max = 100,
+    Max = 50,
     Rounding = 1,
     Suffix = "",
-    Disabled = true,  -- 默认禁用，直到 SpeedToggle 开启
-    Tooltip = "修改当前角色的移动速度"
+    Disabled = true,
+    Tooltip = "修改当前角色的移动速度（上限50）"
 })
 
--- 无限体力 Toggle
 local StaminaToggle = MoveGroup:AddToggle("InfiniteStamina", {
     Text = "无限体力",
     Default = false,
     Tooltip = "体力值始终保持在 100"
 })
 
--- 高亮 Toggle + Slider
-local BrightnessToggle = MoveGroup:AddToggle("HighBrightness", {
+-- ========== Main 标签页 - 环境 ==========
+local EnvironmentGroup = Tabs.Main:AddRightGroupbox("环境", "sun")
+
+local originalBrightness = lighting.Brightness
+local originalAmbient = lighting.Ambient
+local originalOutdoorAmbient = lighting.OutdoorAmbient
+local originalFogEnd = lighting.FogEnd
+
+local BrightnessToggle = EnvironmentGroup:AddToggle("HighBrightness", {
     Text = "高亮",
     Default = false,
     Tooltip = "提高环境亮度"
 })
-local BrightnessSlider = MoveGroup:AddSlider("BrightnessLevel", {
+local BrightnessSlider = EnvironmentGroup:AddSlider("BrightnessLevel", {
     Text = "亮度级别",
     Default = 8,
     Min = 1,
@@ -599,80 +718,197 @@ local BrightnessSlider = MoveGroup:AddSlider("BrightnessLevel", {
     Tooltip = "亮度值，仅在开启高亮时生效"
 })
 
--- ============================================================
--- 功能逻辑实现（使用 OnChanged 监测变化）
--- ============================================================
+local NoFogToggle = EnvironmentGroup:AddToggle("NoFog", {
+    Text = "无雾霾",
+    Default = false,
+    Tooltip = "移除游戏中的雾效"
+})
 
--- 获取当前角色的 Movement 组件（如果有）
-local function getMovement()
-    local char = pl.Character
-    if not char then return nil end
-    return char:FindFirstChild("Movement")
+-- ========== ESP 选项卡 ==========
+local ESPGroup = Tabs.ESP:AddLeftGroupbox("ESP 设置", "eye")
+
+local PlayerESPToggle = ESPGroup:AddToggle("PlayerESP", {
+    Text = "玩家 ESP",
+    Default = false,
+    Tooltip = "显示所有玩家的高亮"
+}):AddColorPicker("PlayerESPColor", {
+    Default = Color3.new(0, 1, 0),
+    Title = "玩家颜色",
+    Transparency = 0.3,
+})
+
+local ChainESPToggle = ESPGroup:AddToggle("ChainESP", {
+    Text = "Chain ESP",
+    Default = false,
+    Tooltip = "显示 Chain 的高亮（仅在夜晚出现）"
+}):AddColorPicker("ChainESPColor", {
+    Default = Color3.new(1, 0, 0),
+    Title = "Chain颜色",
+    Transparency = 0.3,
+})
+
+Loading:SetMessage("正在加载实用功能...")
+Loading:SetCurrentStep(6)
+
+-- ========== ESP 功能逻辑 ==========
+
+local function getChain()
+    local misc = workspace:FindFirstChild("Misc")
+    if not misc then return nil end
+    local ai = misc:FindFirstChild("AI")
+    if not ai then return nil end
+    return ai:FindFirstChild("CHAIN")
 end
 
--- 禁用惯性循环控制
+local chainESPActive = false
+local chainMonitorThread = nil
+
+local function updateChainESP(enable)
+    if enable then
+        chainMonitorThread = task.spawn(function()
+            while Toggles.ChainESP.Value do
+                local chain = getChain()
+                if chain then
+                    manageESP(true, "Chain", chain, Options.ChainESPColor)
+                    updateESPColor("Chain", Options.ChainESPColor)
+                    chainESPActive = true
+                    break
+                end
+                task.wait(0.5)
+            end
+        end)
+    else
+        if chainMonitorThread then
+            task.cancel(chainMonitorThread)
+            chainMonitorThread = nil
+        end
+        manageESP(false, "Chain", nil, nil)
+        chainESPActive = false
+    end
+end
+
+local playerESPCreated = {}
+
+local function updatePlayerESP(enable)
+    if enable then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= pl and player.Character then
+                manageESP(true, player.Name, player.Character, Options.PlayerESPColor)
+                playerESPCreated[player] = true
+            end
+        end
+        local function onPlayerAdded(player)
+            if player == pl then return end
+            local conn = player.CharacterAdded:Connect(function(char)
+                task.wait(0.5)
+                if not Toggles.PlayerESP.Value then return end
+                manageESP(true, player.Name, char, Options.PlayerESPColor)
+                playerESPCreated[player] = true
+            end)
+            if not PlayersESPConnections[player] then PlayersESPConnections[player] = {} end
+            table.insert(PlayersESPConnections[player], conn)
+            if player.Character then
+                manageESP(true, player.Name, player.Character, Options.PlayerESPColor)
+                playerESPCreated[player] = true
+            end
+        end
+        local function onPlayerRemoving(player)
+            manageESP(false, player.Name, nil, nil)
+            playerESPCreated[player] = nil
+            if PlayersESPConnections[player] then
+                for _, c in ipairs(PlayersESPConnections[player]) do c:Disconnect() end
+                PlayersESPConnections[player] = nil
+            end
+        end
+        local conn1 = Players.PlayerAdded:Connect(onPlayerAdded)
+        local conn2 = Players.PlayerRemoving:Connect(onPlayerRemoving)
+        table.insert(PlayersESPConnections, conn1)
+        table.insert(PlayersESPConnections, conn2)
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= pl then onPlayerAdded(player) end
+        end
+    else
+        for _, player in ipairs(Players:GetPlayers()) do
+            manageESP(false, player.Name, nil, nil)
+            playerESPCreated[player] = nil
+        end
+        for _, conn in ipairs(PlayersESPConnections) do
+            if conn and conn.Connected then conn:Disconnect() end
+        end
+        table.clear(PlayersESPConnections)
+    end
+end
+
+-- 绑定事件
+PlayerESPToggle:OnChanged(function(val)
+    updatePlayerESP(val)
+end)
+
+Options.PlayerESPColor:OnChanged(function()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= pl and player.Character then
+            updateESPColor(player.Name, Options.PlayerESPColor)
+        end
+    end
+end)
+
+ChainESPToggle:OnChanged(function(val)
+    updateChainESP(val)
+end)
+
+Options.ChainESPColor:OnChanged(function()
+    if Toggles.ChainESP.Value then
+        updateESPColor("Chain", Options.ChainESPColor)
+    end
+end)
+
+-- ========== 原有移动/环境功能 ==========
+
 local inertiaRunning = false
 local inertiaThread = nil
-
 local function startInertiaLoop()
     if inertiaRunning then return end
     inertiaRunning = true
     inertiaThread = task.spawn(function()
         while inertiaRunning do
-            local move = getMovement()
-            if move and move.Enabled then
-                move.Disabled = true
-            end
+            local move = pl.Character:FindFirstChild("Movement")
+            if move.Enabled then move.Disabled = true end
             task.wait()
         end
     end)
 end
-
 local function stopInertiaLoop()
     inertiaRunning = false
-    if inertiaThread then
-        task.cancel(inertiaThread)
-        inertiaThread = nil
-    end
-    -- 恢复 Movement 的 Disabled 状态
-    local move = getMovement()
-    if move then
-        move.Disabled = false
-    end
+    if inertiaThread then task.cancel(inertiaThread); inertiaThread = nil end
+    local move = pl.Character:FindFirstChild("Movement")
+    if move then move.Disabled = false end
 end
 
--- 速度修改相关
-local speedModActive = false
-
-local function applySpeed()
-    if speedModActive then
-        local char = pl.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum.WalkSpeed = SpeedSlider.Value
-                -- 可选：设置 Running 状态
-                -- local stats = char:FindFirstChild("Stats")
-                -- if stats then stats.Running = true end
+local function startSpeedLoop()
+    if speedLoopRunning then return end
+    speedLoopRunning = true
+    speedLoopConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        if speedLoopRunning and SpeedToggle.Value then
+            local char = pl.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then hum.WalkSpeed = SpeedSlider.Value end
             end
         end
-    end
+    end)
 end
-
-local function resetSpeed()
+local function stopSpeedLoop()
+    speedLoopRunning = false
+    if speedLoopConnection then speedLoopConnection:Disconnect(); speedLoopConnection = nil end
     local char = pl.Character
     if char then
         local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.WalkSpeed = originalSpeed
-        end
+        if hum then hum.WalkSpeed = originalSpeed end
     end
 end
 
--- 无限体力循环控制
 local staminaRunning = false
 local staminaThread = nil
-
 local function startStaminaLoop()
     if staminaRunning then return end
     staminaRunning = true
@@ -683,25 +919,18 @@ local function startStaminaLoop()
                 local stats = char:FindFirstChild("Stats")
                 if stats then
                     local sta = stats:FindFirstChild("Stamina")
-                    if sta then
-                        sta.Value = 100
-                    end
+                    if sta then sta.Value = 100 end
                 end
             end
             task.wait()
         end
     end)
 end
-
 local function stopStaminaLoop()
     staminaRunning = false
-    if staminaThread then
-        task.cancel(staminaThread)
-        staminaThread = nil
-    end
+    if staminaThread then task.cancel(staminaThread); staminaThread = nil end
 end
 
--- 高亮应用
 local function applyBrightness()
     if BrightnessToggle.Value then
         local level = BrightnessSlider.Value
@@ -715,84 +944,49 @@ local function applyBrightness()
     end
 end
 
--- ---- 绑定 OnChanged ----
+local function applyNoFog()
+    if NoFogToggle.Value then
+        lighting.FogEnd = 9e9
+        if rain then
+            rain.Parent = nil
+        end
+    else
+        lighting.FogEnd = originalFogEnd
+        rain.Parent = lighting
+    end
+end
 
--- 禁用惯性
 InertiaToggle:OnChanged(function(val)
-    if val then
-        startInertiaLoop()
-    else
-        stopInertiaLoop()
-    end
+    if val then startInertiaLoop() else stopInertiaLoop() end
 end)
-
--- 启用速度修改
 SpeedToggle:OnChanged(function(val)
-    speedModActive = val
     SpeedSlider:SetDisabled(not val)
-    if val then
-        applySpeed()
-    else
-        resetSpeed()
-    end
+    if val then startSpeedLoop() else stopSpeedLoop() end
 end)
-
--- 速度值变化（仅当速度修改启用时生效）
-SpeedSlider:OnChanged(function(val)
-    if speedModActive then
-        applySpeed()
-    end
-end)
-
--- 无限体力
+SpeedSlider:OnChanged(function(val) end)
 StaminaToggle:OnChanged(function(val)
-    if val then
-        startStaminaLoop()
-    else
-        stopStaminaLoop()
-    end
+    if val then startStaminaLoop() else stopStaminaLoop() end
 end)
-
--- 高亮
 BrightnessToggle:OnChanged(function(val)
     BrightnessSlider:SetDisabled(not val)
     applyBrightness()
 end)
-
 BrightnessSlider:OnChanged(function(val)
-    if BrightnessToggle.Value then
-        applyBrightness()
-    end
+    if BrightnessToggle.Value then applyBrightness() end
 end)
+NoFogToggle:OnChanged(function(val) applyNoFog() end)
 
--- 角色重生时重新应用状态
 pl.CharacterAdded:Connect(function(char)
-    task.wait(0.5)  -- 等待角色稳定
-    if InertiaToggle.Value then
-        startInertiaLoop()
-    end
-    if speedModActive then
-        applySpeed()
-    end
-    if StaminaToggle.Value then
-        startStaminaLoop()
-    end
-    if BrightnessToggle.Value then
-        applyBrightness()
-    end
+    task.wait(0.5)
+    if InertiaToggle.Value then startInertiaLoop() end
+    if SpeedToggle.Value then startSpeedLoop() end
+    if StaminaToggle.Value then startStaminaLoop() end
+    if BrightnessToggle.Value then applyBrightness() end
+    if NoFogToggle.Value then applyNoFog() end
 end)
 
--- ============================================================
--- 原有 UI 设置部分（保持不变）
--- ============================================================
-local EnvironmentGroup = Tabs.Main:AddRightGroupbox("环境", "sun")
+-- ========== 其他（Exploit 和 UI 设置） ==========
 local CameraGroup = Tabs.Main:AddRightGroupbox("相机")
-
-local highBrightnessEnabled = false
-local brightnessLevel = 1
-local brightnessConnection
-local Lighting = game:GetService("Lighting")
-local RunService = game:GetService("RunService")
 
 local UISettingsTab = Window:AddTab("UI设置", "settings")
 local MenuGroup = UISettingsTab:AddLeftGroupbox("菜单", "wrench")
@@ -814,23 +1008,22 @@ MenuGroup:AddButton({
         dialog:SetTitle("XBHUB")
         dialog:SetDescription("正在卸载所有功能,这可能会需要点时间...")
         task.spawn(function()
-            -- 关闭所有开关
             for _, toggle in pairs(Toggles) do
                 pcall(function() toggle:SetValue(false) end)
             end
             task.wait(0.5)
-            
-            -- 清理ESP
             for _, esp in pairs(activeESP) do
                 pcall(function() esp:Destroy() end)
             end
             table.clear(activeESP)
-            
-            -- 清理玩家ESP连接
             for _, conns in pairs(PlayersESPConnections) do
                 for _, c in ipairs(conns) do c:Disconnect() end
             end
             table.clear(PlayersESPConnections)
+            stopSpeedLoop()
+            stopInertiaLoop()
+            stopStaminaLoop()
+            if chainMonitorThread then task.cancel(chainMonitorThread); chainMonitorThread = nil end
             dialog:SetDescription("卸载完成!正在关闭UI...")
             task.wait(0.5)
             dialog:Dismiss()
@@ -841,11 +1034,8 @@ MenuGroup:AddButton({
     Risky = false,
 })
 
-Loading:SetMessage("正在加载实用功能...")
-Loading:SetCurrentStep(5)
-
 Loading:SetMessage("正在加载设置界面...")
-Loading:SetCurrentStep(6)
+Loading:SetCurrentStep(7)
 
 ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
@@ -861,7 +1051,7 @@ Library.ToggleKeybind = Options.MenuToggleKey
 
 coroutine.close(loadingTime)
 Loading:SetMessage("完成!")
-Loading:SetCurrentStep(7)
+Loading:SetCurrentStep(8)
 Loading:SetLoadingIconTweenTime(0)
 Loading:SetLoadingIcon("check")
 JoinButton:SetDisabled(false)
